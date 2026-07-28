@@ -572,6 +572,7 @@ function TrendCard({ v }) {
     <div className="card elev-sm" style={{ padding: 24, marginTop: 16 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: 12 }}>
         <h3 style={{ margin: 0 }}>월별 수입 추이</h3>
+        <a href="/wine-color-report" className="btn btn-ghost" style={{ textDecoration: 'none', fontSize: 12 }}>와인 컬러 리포트 →</a>
       </div>
       <div style={{ marginTop: 12, marginBottom: 8 }}>
         <div style={{ display: 'flex', gap: 8, paddingBottom: 8, borderBottom: '1px solid var(--color-divider)' }}>
