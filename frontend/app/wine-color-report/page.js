@@ -84,16 +84,23 @@ export default function WineColorReportPage() {
     const dataSourceLabel = '관세청 수출입무역통계(nitemtrade) · ' + latestPeriod.year + '.' + pad2(latestPeriod.month) + ' 기준';
     const YEARS1 = Array.from({ length: 6 }, (_, i) => baseYear - 6 + i);
     const prevBaseYear = baseYear - 1;
+    // 기준연도가 데이터상 최신연도(진행 중인 해)일 때만 latestMonth까지의 YTD로 비교하고,
+    // 이미 끝난 과거 연도는 12월까지 연간으로 비교한다 — 데이터가 늘어나면(예: 7월 갱신)
+    // isLatestYear 케이스의 monthCap도 같이 늘어나 헤더/집계가 자동으로 따라간다.
+    const isLatestYear = baseYear === latestPeriod.year;
+    const monthCap = isLatestYear ? latestPeriod.month : 12;
+    const periodLabel = (y) => (isLatestYear ? 'Y' + yy(y) + 'M' + pad2(monthCap) : 'Y' + yy(y));
+    const periodLabelWide = (y) => (isLatestYear ? 'Y' + yy(y) + 'M' + pad2(monthCap) + ' YTD' : 'Y' + yy(y) + ' 연간');
 
     const yearVol = (y, minor) => sumWine(wine, 'volume', r => r.year === y && (!minor || r.minor === minor)) / 1e6;
     const yearAmt = (y, minor) => sumWine(wine, 'value', r => r.year === y && (!minor || r.minor === minor)) / 1e6;
-    const halfVol = (y, minor) => sumWine(wine, 'volume', r => r.year === y && r.month <= 6 && (!minor || r.minor === minor)) / 1e6;
-    const halfAmt = (y, minor) => sumWine(wine, 'value', r => r.year === y && r.month <= 6 && (!minor || r.minor === minor)) / 1e6;
+    const periodVol = (y, minor) => sumWine(wine, 'volume', r => r.year === y && r.month <= monthCap && (!minor || r.minor === minor)) / 1e6;
+    const periodAmt = (y, minor) => sumWine(wine, 'value', r => r.year === y && r.month <= monthCap && (!minor || r.minor === minor)) / 1e6;
 
     const metricsByColor = [null, ...COLORS].map(minor => ({
       minor,
-      vol: YEARS1.map(y => yearVol(y, minor)).concat([halfVol(prevBaseYear, minor), halfVol(baseYear, minor)]),
-      amt: YEARS1.map(y => yearAmt(y, minor)).concat([halfAmt(prevBaseYear, minor), halfAmt(baseYear, minor)]),
+      vol: YEARS1.map(y => yearVol(y, minor)).concat([periodVol(prevBaseYear, minor), periodVol(baseYear, minor)]),
+      amt: YEARS1.map(y => yearAmt(y, minor)).concat([periodAmt(prevBaseYear, minor), periodAmt(baseYear, minor)]),
     }));
     const totalAmtArr = metricsByColor[0].amt;
     metricsByColor.forEach(m => {
@@ -115,10 +122,10 @@ export default function WineColorReportPage() {
     }));
     const msByColor = metricsByColor.slice(1).map(m => ({ name: colorName(m.minor), h25Pct: m.ms[6], h26Pct: m.ms[7] }));
 
-    // ---- Table 2: 국가별 수입금액 (컬러별, {prevBaseYear} H1 vs {baseYear} H1) ----
-    const wineH1 = wine.filter(r => r.month <= 6 && (r.year === prevBaseYear || r.year === baseYear));
+    // ---- Table 2: 국가별 수입금액 (컬러별, {prevBaseYear} vs {baseYear}, monthCap까지) ----
+    const wineScoped = wine.filter(r => r.month <= monthCap && (r.year === prevBaseYear || r.year === baseYear));
     const byCountry = new Map();
-    wineH1.forEach(r => {
+    wineScoped.forEach(r => {
       if (!byCountry.has(r.country)) byCountry.set(r.country, { country: r.country, red25: 0, red26: 0, white25: 0, white26: 0, spark25: 0, spark26: 0, total25: 0, total26: 0 });
       const c = byCountry.get(r.country);
       const period = r.year === prevBaseYear ? '25' : '26';
@@ -161,7 +168,7 @@ export default function WineColorReportPage() {
     const stats = {
       period: latestPeriod.year + '.' + pad2(latestPeriod.month),
       기준연도: baseYear,
-      비교대상: 'H1(1~6월), ' + prevBaseYear + '년 vs ' + baseYear + '년',
+      비교대상: (isLatestYear ? ('1~' + monthCap + '월 YTD') : '연간(1~12월)') + ', ' + prevBaseYear + '년 vs ' + baseYear + '년',
       table1_컬러별_연간상반기: {
         totalVolumeGrowthPct: Number(totalVolG.toFixed(1)),
         totalAmountGrowthPct: Number(totalAmtG.toFixed(1)),
@@ -181,7 +188,7 @@ export default function WineColorReportPage() {
       },
     };
 
-    return { dataSourceLabel, table1Rows, table2Rows, stats, YEARS1, prevBaseYear, baseYear };
+    return { dataSourceLabel, table1Rows, table2Rows, stats, YEARS1, prevBaseYear, baseYear, isLatestYear, monthCap, periodLabel, periodLabelWide };
   }, [snapshot, baseYear]);
 
   useEffect(() => {
@@ -226,7 +233,9 @@ export default function WineColorReportPage() {
               <button key={y} type="button" className="seg-opt" style={{ border: 'none', ...segStyle(baseYear === y) }} onClick={() => setBaseYear(y)}>{y}년</button>
             ))}
           </div>
-          <span className="text-muted" style={{ fontSize: 11 }}>· H1(1~6월) 기준 {computed.prevBaseYear}년 vs {computed.baseYear}년 비교</span>
+          <span className="text-muted" style={{ fontSize: 11 }}>
+            · {computed.isLatestYear ? ('1~' + computed.monthCap + '월 YTD') : '연간(1~12월)'} 기준 {computed.prevBaseYear}년 vs {computed.baseYear}년 비교
+          </span>
         </div>
 
         <div className="card elev-sm" style={{ padding: 24, marginTop: 16 }}>
@@ -243,8 +252,8 @@ export default function WineColorReportPage() {
                 <tr>
                   <th style={{ textAlign: 'left' }}>구분</th>
                   {computed.YEARS1.map(y => <th key={y}>Y{yy(y)}</th>)}
-                  <th style={{ background: 'var(--color-accent-100)' }}>Y{yy(computed.prevBaseYear)} H1</th>
-                  <th style={{ background: 'var(--color-accent-100)', boxShadow: 'inset 0 0 0 1.5px #dc2626' }}>Y{yy(computed.baseYear)} H1</th>
+                  <th style={{ background: 'var(--color-accent-100)' }}>{computed.periodLabel(computed.prevBaseYear)}</th>
+                  <th style={{ background: 'var(--color-accent-100)', boxShadow: 'inset 0 0 0 1.5px #dc2626' }}>{computed.periodLabel(computed.baseYear)}</th>
                   <th style={{ background: 'var(--color-accent-100)' }}>vs YoY</th>
                   <th style={{ background: 'var(--color-accent-100)' }}>Growth</th>
                 </tr>
@@ -277,8 +286,8 @@ export default function WineColorReportPage() {
               <thead>
                 <tr>
                   <th rowSpan={2} style={{ textAlign: 'left' }}>구분</th>
-                  <th colSpan={4}>Y{yy(computed.prevBaseYear)}M06 YTD</th>
-                  <th colSpan={4}>Y{yy(computed.baseYear)}M06 YTD</th>
+                  <th colSpan={4}>{computed.periodLabelWide(computed.prevBaseYear)}</th>
+                  <th colSpan={4}>{computed.periodLabelWide(computed.baseYear)}</th>
                   <th colSpan={4}>YoY Gap</th>
                   <th colSpan={4}>GRW%</th>
                 </tr>
