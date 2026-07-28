@@ -1,4 +1,10 @@
-const MODEL = 'gemini-flash-latest';
+const MODEL = 'gemini-flash-lite-latest';
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+
+// Module-scope cache: survives across requests within this server process.
+// Keeps repeat calls for the same stats (e.g. re-visiting the same 기준연도,
+// or another user loading the page) from burning the free-tier quota again.
+const cache = new Map();
 
 const SCHEMA = {
   type: 'OBJECT',
@@ -18,6 +24,11 @@ export async function POST(req) {
   }
 
   const stats = await req.json();
+  const cacheKey = JSON.stringify(stats);
+  const hit = cache.get(cacheKey);
+  if (hit && Date.now() - hit.at < CACHE_TTL_MS) {
+    return Response.json(hit.bullets);
+  }
 
   const prompt = [
     '너는 나라셀라(와인 수입 유통사)의 경영기획팀 애널리스트다.',
@@ -62,5 +73,6 @@ export async function POST(req) {
   if (!parsed) {
     return Response.json({ error: 'failed to parse gemini response', raw: text ?? data }, { status: 502 });
   }
+  cache.set(cacheKey, { bullets: parsed, at: Date.now() });
   return Response.json(parsed);
 }
