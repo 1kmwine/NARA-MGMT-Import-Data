@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+backend/.cache/
+backend/.env
+backend/static_legacy_wine_only/
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
+data/
+PPT/
+index/

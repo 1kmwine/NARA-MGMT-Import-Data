@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="styles.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+body{margin:0}
+:root{
+  --font-heading:"Noto Sans KR",system-ui,sans-serif;
+  --font-heading-weight:700;
+  --font-body:"Noto Sans KR",system-ui,sans-serif;
+  --color-bg:#ffffff;
+  --color-surface:#f5f6f5;
+  --color-text:#161816;
+  --color-divider:color-mix(in srgb, #161816 12%, transparent);
+  --color-accent:#3f7f4f;
+  --color-accent-100:#eef6ee;--color-accent-200:#d7ecda;--color-accent-300:#b3d9ba;--color-accent-400:#86c092;
+  --color-accent-500:#5da16d;--color-accent-600:#3f7f4f;--color-accent-700:#2f633c;--color-accent-800:#21472a;--color-accent-900:#142c19;
+  --color-accent-2-100:#eef6ee;--color-accent-2-200:#d7ecda;--color-accent-2-300:#b3d9ba;--color-accent-2-400:#86c092;
+  --color-accent-2-500:#5da16d;--color-accent-2-600:#3f7f4f;--color-accent-2-700:#2f633c;--color-accent-2-800:#21472a;--color-accent-2-900:#142c19;
+}
+a{color:var(--color-accent-700)}
+a:hover{color:var(--color-accent-900)}
+.rpt-table{width:100%;border-collapse:collapse;font-size:12.5px}
+.rpt-table th{border:1px solid var(--color-divider);padding:6px 10px;background:var(--color-neutral-100);font-weight:700;text-align:center;white-space:nowrap}
+.rpt-table td{border:1px solid var(--color-divider);white-space:nowrap}
+</style>
+</helmet>
+<div style="min-height:100vh;background:var(--color-bg);color:var(--color-text);font-family:var(--font-body);padding-bottom:64px">
+
+  <div class="nav" style="padding:14px 32px">
+    <div class="nav-brand">국내 수입 주류 대시보드 · 와인 컬러 리포트</div>
+    <span class="tag tag-outline" style="margin-right:auto;margin-left:14px">{{ dataSourceLabel }}</span>
+    <a href="index.html" class="btn btn-secondary" style="text-decoration:none;font-size:13px">← 전체 주류 보기</a>
+  </div>
+
+  <div style="max-width:1280px;margin:0 auto;padding:0 32px">
+
+    <!-- Table 1: 컬러별 연간 및 상반기 비교 -->
+    <div class="card elev-sm" style="padding:24px;margin-top:24px">
+      <h2 style="margin:0 0 14px;padding-bottom:10px;border-bottom:4px solid #111;font-size:19px">국내 와인 수입_컬러_연간 및 상반기 비교</h2>
+      <div style="font-size:13px;line-height:2;margin-bottom:10px">
+        <div>➢ {{ t1Bullet1 }}</div>
+        <div>➢ {{ t1Bullet2 }}</div>
+      </div>
+      <div style="text-align:center;font-weight:700;font-size:13px;margin-bottom:4px">와인 수입 추이</div>
+      <div class="text-muted" style="font-size:11px;margin-bottom:8px">[단위: 백만 리터, 백만 달러]</div>
+      <div style="overflow-x:auto">
+        <table class="rpt-table">
+          <thead>
+            <tr>
+              <th style="text-align:left">구분</th>
+              <th>Y20</th><th>Y21</th><th>Y22</th><th>Y23</th><th>Y24</th><th>Y25</th>
+              <th style="background:var(--color-accent-100)">Y25 H1</th>
+              <th style="background:var(--color-accent-100);box-shadow:inset 0 0 0 1.5px #dc2626">Y26 H1</th>
+              <th style="background:var(--color-accent-100)">vs YoY</th>
+              <th style="background:var(--color-accent-100)">Growth</th>
+            </tr>
+          </thead>
+          <tbody>
+            <sc-for list="{{ table1Rows }}" as="row" hint-placeholder-count="20">
+              <tr style="{{ row.rowBg }}">
+                <td style="padding:6px 10px;font-weight:{{ row.labelWeight }};font-style:{{ row.labelStyle }}">{{ row.label }}</td>
+                <sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="10">
+                  <td style="{{ c.style }}">{{ c.text }}</td>
+                </sc-for>
+              </tr>
+            </sc-for>
+          </tbody>
+        </table>
+      </div>
+      <div style="text-align:right;font-size:10.5px;font-style:italic;color:var(--color-neutral-600);margin-top:8px">※ 출처: 관세청 수출입무역통계</div>
+    </div>
+
+    <!-- Table 2: 국가별 수입금액 -->
+    <div class="card elev-sm" style="padding:24px;margin-top:16px">
+      <h2 style="margin:0 0 14px;padding-bottom:10px;border-bottom:4px solid #111;font-size:19px">국내 와인 수입_국가별 수입금액</h2>
+      <div style="font-size:13px;line-height:2;margin-bottom:10px">
+        <div>➢ {{ t2Bullet1 }}</div>
+        <div>➢ {{ t2Bullet2 }}</div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline">
+        <div style="font-weight:700;font-size:13px;margin-bottom:4px">국가별 수입 금액 추이</div>
+        <div class="text-muted" style="font-size:11px;margin-bottom:8px">[단위: 백만 달러]</div>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="rpt-table">
+          <thead>
+            <tr>
+              <th rowspan="2" style="text-align:left">구분</th>
+              <th colspan="4">Y25M06 YTD</th>
+              <th colspan="4">Y26M06 YTD</th>
+              <th colspan="4">YoY Gap</th>
+              <th colspan="4">GRW%</th>
+            </tr>
+            <tr>
+              <th>레드</th><th>화이트</th><th>스파클링</th><th style="background:var(--color-neutral-200)">합계</th>
+              <th>레드</th><th>화이트</th><th>스파클링</th><th style="background:var(--color-neutral-200)">합계</th>
+              <th>레드</th><th>화이트</th><th>스파클링</th><th style="background:var(--color-neutral-200)">합계</th>
+              <th>레드</th><th>화이트</th><th>스파클링</th><th style="background:var(--color-neutral-200)">합계</th>
+            </tr>
+          </thead>
+          <tbody>
+            <sc-for list="{{ table2Rows }}" as="row" hint-placeholder-count="12">
+              <tr style="{{ row.rowBg }}">
+                <td style="padding:6px 10px;font-weight:{{ row.labelWeight }}">{{ row.label }}</td>
+                <sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="16">
+                  <td style="{{ c.style }}">{{ c.text }}</td>
+                </sc-for>
+              </tr>
+            </sc-for>
+          </tbody>
+        </table>
+      </div>
+      <div style="text-align:right;font-size:10.5px;font-style:italic;color:var(--color-neutral-600);margin-top:8px">※ 출처: 관세청 수출입무역통계</div>
+    </div>
+
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = {};
+
+  componentDidMount() {
+    import('./liquorData.js').then(mod => { this.lib = mod; this.forceUpdate(); });
+  }
+
+  sumWine(rows, field, pred) { return rows.filter(pred).reduce((a, r) => a + r[field], 0); }
+  fmtM1(v) { return (v || 0).toLocaleString('ko-KR', { maximumFractionDigits: 1, minimumFractionDigits: 1 }); }
+  fmtSigned1(v) { v = v || 0; return (v >= 0 ? '+' : '') + v.toLocaleString('ko-KR', { maximumFractionDigits: 1, minimumFractionDigits: 1 }); }
+  fmtSignedPct1(v) { if (!isFinite(v)) v = 0; return (v >= 0 ? '+' : '') + v.toFixed(1) + '%'; }
+  fmtSignedPP1(v) { if (!isFinite(v)) v = 0; return (v >= 0 ? '+' : '') + v.toFixed(1) + '%p'; }
+  fmtPct0(v) { return Math.round(v || 0) + '%'; }
+  deltaColor(v) { return v >= 0 ? '#2563eb' : '#dc2626'; }
+  pctChange(a, b) { return a !== 0 ? (b - a) / Math.abs(a) * 100 : 0; }
+
+  buildRow(label, vals, valFmt, vsYoyFmt, growthBlank, bold) {
+    const h25 = vals[6], h26 = vals[7];
+    const vsYoy = h26 - h25;
+    const growth = this.pctChange(h25, h26);
+    const cells = vals.map((v, i) => ({
+      text: valFmt(v),
+      style: 'text-align:right;padding:6px 10px' + (i >= 6 ? ';background:var(--color-accent-100)' : '') + (i === 7 ? ';box-shadow:inset 0 0 0 1.5px #dc2626' : ''),
+    }));
+    cells.push({ text: vsYoyFmt(vsYoy), style: 'text-align:right;padding:6px 10px;font-weight:600;background:var(--color-accent-100);color:' + this.deltaColor(vsYoy) });
+    cells.push({
+      text: growthBlank ? '—' : this.fmtSignedPct1(growth),
+      style: 'text-align:right;padding:6px 10px;font-weight:600;background:var(--color-accent-100);color:' + (growthBlank ? 'var(--color-text)' : this.deltaColor(growth)),
+    });
+    return { label, labelWeight: bold ? 700 : 400, labelStyle: bold ? 'normal' : 'italic', rowBg: bold ? 'background:var(--color-neutral-100)' : '', cells };
+  }
+
+  renderVals() {
+    if (!this.lib) return {};
+    const { generateSnapshot } = this.lib;
+    const { rows, monthsList } = generateSnapshot();
+    const wine = rows.filter(r => r.major === '와인');
+    const COLORS = ['레드 와인', '화이트 와인', '스파클링 와인', '기타 와인'];
+    const colorName = m => m.replace(' 와인', '');
+    const pad2 = n => String(n).padStart(2, '0');
+    const latestPeriod = monthsList[monthsList.length - 1];
+    const dataSourceLabel = '관세청 수출입무역통계(nitemtrade) · ' + latestPeriod.year + '.' + pad2(latestPeriod.month) + ' 기준';
+
+    // ---- Table 1: 컬러별 연간/상반기 비교 ----
+    const yearVol = (y, minor) => this.sumWine(wine, 'volume', r => r.year === y && (!minor || r.minor === minor)) / 1e6;
+    const yearAmt = (y, minor) => this.sumWine(wine, 'value', r => r.year === y && (!minor || r.minor === minor)) / 1e6;
+    const halfVol = (y, minor) => this.sumWine(wine, 'volume', r => r.year === y && r.month <= 6 && (!minor || r.minor === minor)) / 1e6;
+    const halfAmt = (y, minor) => this.sumWine(wine, 'value', r => r.year === y && r.month <= 6 && (!minor || r.minor === minor)) / 1e6;
+    const YEARS1 = [2020, 2021, 2022, 2023, 2024, 2025];
+
+    const metricsByColor = [null, ...COLORS].map(minor => ({
+      minor,
+      vol: YEARS1.map(y => yearVol(y, minor)).concat([halfVol(2025, minor), halfVol(2026, minor)]),
+      amt: YEARS1.map(y => yearAmt(y, minor)).concat([halfAmt(2025, minor), halfAmt(2026, minor)]),
+    }));
+    const totalAmtArr = metricsByColor[0].amt;
+    metricsByColor.forEach(m => {
+      m.price = m.vol.map((v, i) => v ? m.amt[i] / v : 0);
+      m.ms = m.amt.map((v, i) => totalAmtArr[i] ? v / totalAmtArr[i] * 100 : 0);
+    });
+
+    const volRows = metricsByColor.map((m, i) => this.buildRow(i === 0 ? 'Volume' : colorName(m.minor), m.vol, this.fmtM1.bind(this), this.fmtSigned1.bind(this), false, i === 0));
+    const amtRows = metricsByColor.map((m, i) => this.buildRow(i === 0 ? 'Amount' : colorName(m.minor), m.amt, this.fmtM1.bind(this), this.fmtSigned1.bind(this), false, i === 0));
+    const priceRows = metricsByColor.map((m, i) => this.buildRow(i === 0 ? 'Price(ℓ)' : colorName(m.minor), m.price, this.fmtM1.bind(this), this.fmtSigned1.bind(this), false, i === 0));
+    const msRows = metricsByColor.map((m, i) => this.buildRow(i === 0 ? 'MS' : colorName(m.minor), m.ms, this.fmtPct0.bind(this), this.fmtSignedPP1.bind(this), true, i === 0));
+    const table1Rows = [...volRows, ...amtRows, ...priceRows, ...msRows];
+
+    const totalVolG = this.pctChange(metricsByColor[0].vol[6], metricsByColor[0].vol[7]);
+    const totalAmtG = this.pctChange(metricsByColor[0].amt[6], metricsByColor[0].amt[7]);
+    const priceGrowths = metricsByColor.slice(1).map(m => ({ name: colorName(m.minor), g: this.pctChange(m.price[6], m.price[7]) }));
+    const topPriceColor = priceGrowths.reduce((a, b) => (b.g > a.g ? b : a));
+    const t1Bullet1 = latestPeriod.year + '년 YTD 기준, 전년 대비 수입량 ' + this.fmtSignedPct1(totalVolG) + ' ' + (totalVolG >= 0 ? '증가' : '감소') +
+      '에도 금액은 ' + this.fmtSignedPct1(totalAmtG) + ' ' + (totalAmtG >= 0 ? '증가' : '감소') + '하여 ' + (totalAmtG >= totalVolG ? '가격 중심 성장' : '물량 중심 변동') + ' 유지';
+    const t1Bullet2 = topPriceColor.name + ' 평균 단가 ' + this.fmtSignedPct1(topPriceColor.g) + ' ' + (topPriceColor.g >= 0 ? '상승' : '하락') +
+      '으로 ' + (topPriceColor.g >= 0 ? '프리미엄 ' + topPriceColor.name + ' 와인이 시장 확장을 주도' : topPriceColor.name + ' 와인 단가 조정이 이어지고') + '고 있음';
+
+    // ---- Table 2: 국가별 수입금액 (컬러별, Y25 H1 vs Y26 H1) ----
+    const wineH1 = wine.filter(r => r.month <= 6 && (r.year === 2025 || r.year === 2026));
+    const byCountry = new Map();
+    wineH1.forEach(r => {
+      if (!byCountry.has(r.country)) byCountry.set(r.country, { country: r.country, red25: 0, red26: 0, white25: 0, white26: 0, spark25: 0, spark26: 0, total25: 0, total26: 0 });
+      const c = byCountry.get(r.country);
+      const yy = r.year === 2025 ? '25' : '26';
+      c['total' + yy] += r.value / 1e6;
+      if (r.minor === '레드 와인') c['red' + yy] += r.value / 1e6;
+      else if (r.minor === '화이트 와인') c['white' + yy] += r.value / 1e6;
+      else if (r.minor === '스파클링 와인') c['spark' + yy] += r.value / 1e6;
+    });
+    const countryAgg = [...byCountry.values()];
+    const KEYS2 = ['red25', 'red26', 'white25', 'white26', 'spark25', 'spark26', 'total25', 'total26'];
+    const sumAgg = (label, list) => list.reduce((acc, c) => { KEYS2.forEach(k => acc[k] += c[k]); return acc; }, { country: label, red25: 0, red26: 0, white25: 0, white26: 0, spark25: 0, spark26: 0, total25: 0, total26: 0 });
+
+    const sorted = [...countryAgg].sort((a, b) => b.total26 - a.total26);
+    const topN = sorted.slice(0, 10);
+    const restAgg = sumAgg('기타', sorted.slice(10));
+    const allTotal = sumAgg('합계', countryAgg);
+
+    const buildRow2 = (c, bold) => {
+      const vals25 = [c.red25, c.white25, c.spark25, c.total25];
+      const vals26 = [c.red26, c.white26, c.spark26, c.total26];
+      const gaps = vals26.map((v, i) => v - vals25[i]);
+      const grw = vals26.map((v, i) => this.pctChange(vals25[i], v));
+      const cellsFor = (arr, fmtFn, colorFn) => arr.map((v, i) => ({
+        text: fmtFn(v),
+        style: 'text-align:right;padding:6px 10px' + (i === 3 ? ';font-weight:700;background:var(--color-neutral-100)' : '') + (colorFn ? ';color:' + colorFn(v) : ''),
+      }));
+      const cells = [
+        ...cellsFor(vals25, this.fmtM1.bind(this)),
+        ...cellsFor(vals26, this.fmtM1.bind(this)),
+        ...cellsFor(gaps, this.fmtSigned1.bind(this), v => this.deltaColor(v)),
+        ...cellsFor(grw, this.fmtSignedPct1.bind(this), v => this.deltaColor(v)),
+      ];
+      return { label: c.country, labelWeight: bold ? 700 : 400, rowBg: bold ? 'background:var(--color-neutral-100)' : '', cells };
+    };
+    const table2Rows = [buildRow2(allTotal, true), ...topN.map(c => buildRow2(c, false)), buildRow2(restAgg, false)];
+
+    const gapOf = c => c.total26 - c.total25;
+    const topGapCountry = countryAgg.reduce((a, b) => (gapOf(b) > gapOf(a) ? b : a));
+    const totalGap = gapOf(allTotal);
+    const ratio = totalGap !== 0 ? gapOf(topGapCountry) / totalGap : 0;
+    const exTotal25 = allTotal.total25 - topGapCountry.total25;
+    const exTotal26 = allTotal.total26 - topGapCountry.total26;
+    const exGrowth = this.pctChange(exTotal25, exTotal26);
+    const t2Bullet1 = topGapCountry.country + ' 수입 금액 증가 ' + this.fmtSigned1(gapOf(topGapCountry)) + 'M$가 전체 증가분(' + this.fmtSigned1(totalGap) + 'M$)의 ' +
+      Math.abs(ratio).toFixed(1) + '배로 성장을 주도 - ' + topGapCountry.country + ' 제외 시 YoY' + this.fmtSignedPct1(exGrowth);
+
+    const colorKeys = [['red', '레드'], ['white', '화이트'], ['spark', '스파클링']];
+    let worst = null;
+    countryAgg.forEach(c => {
+      colorKeys.forEach(([k, label]) => {
+        const g = c[k + '26'] - c[k + '25'];
+        if (!worst || g < worst.g) worst = { country: c.country, label, key: k, g };
+      });
+    });
+    let absorber = null;
+    countryAgg.forEach(c => {
+      if (c.country === worst.country) return;
+      const g = c[worst.key + '26'] - c[worst.key + '25'];
+      if (!absorber || g > absorber.g) absorber = { country: c.country, g };
+    });
+    const t2Bullet2 = worst.country + ' ' + worst.label + ' 와인 수입액 ' + this.fmtSigned1(worst.g) + 'M$ 감소를 ' + absorber.country + '가 흡수(' + this.fmtSigned1(absorber.g) + 'M$)';
+
+    return {
+      dataSourceLabel,
+      table1Rows, t1Bullet1, t1Bullet2,
+      table2Rows, t2Bullet1, t2Bullet2,
+    };
+  }
+}
+
+</script>
+</body>
+</html>

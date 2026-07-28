@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="styles.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+body{margin:0}
+:root{
+  --font-heading:"Noto Sans KR",system-ui,sans-serif;
+  --font-heading-weight:700;
+  --font-body:"Noto Sans KR",system-ui,sans-serif;
+  --color-bg:#ffffff;
+  --color-surface:#f5f6f5;
+  --color-text:#161816;
+  --color-divider:color-mix(in srgb, #161816 12%, transparent);
+  --color-accent:#3f7f4f;
+  --color-accent-100:#eef6ee;--color-accent-200:#d7ecda;--color-accent-300:#b3d9ba;--color-accent-400:#86c092;
+  --color-accent-500:#5da16d;--color-accent-600:#3f7f4f;--color-accent-700:#2f633c;--color-accent-800:#21472a;--color-accent-900:#142c19;
+  --color-accent-2-100:#eef6ee;--color-accent-2-200:#d7ecda;--color-accent-2-300:#b3d9ba;--color-accent-2-400:#86c092;
+  --color-accent-2-500:#5da16d;--color-accent-2-600:#3f7f4f;--color-accent-2-700:#2f633c;--color-accent-2-800:#21472a;--color-accent-2-900:#142c19;
+}
+a{color:var(--color-accent-700)}
+a:hover{color:var(--color-accent-900)}
+</style>
+</helmet>
+<div style="min-height:100vh;background:var(--color-bg);color:var(--color-text);font-family:var(--font-body);padding-bottom:64px">
+
+  <div class="nav" style="padding:14px 32px">
+    <div class="nav-brand">국내 수입 주류 대시보드 · 전체</div>
+    <span class="tag tag-outline" style="margin-left:14px">{{ dataSourceLabel }}</span>
+    <button type="button" class="btn btn-ghost" style="font-size:12px;margin-right:auto" onClick="{{ onForceUpdate }}">{{ forceUpdateLabel }}</button>
+    <sc-if value="{{ updateMessage }}" hint-placeholder-val="{{ false }}">
+      <span class="text-muted" style="font-size:11px">{{ updateMessage }}</span>
+    </sc-if>
+    <div class="seg">
+      <sc-for list="{{ currencyOptions }}" as="opt" hint-placeholder-count="2">
+        <button type="button" class="seg-opt" style="border:none;{{ opt.style }}" onClick="{{ opt.onClick }}">{{ opt.label }}</button>
+      </sc-for>
+    </div>
+    <sc-if value="{{ showFxInput }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;align-items:center;gap:6px">
+        <span class="text-muted" style="font-size:11px">환율</span>
+        <input class="input" type="number" style="width:76px;min-height:32px;padding:4px 8px;font-size:13px" value="{{ exchangeRate }}" onChange="{{ onExchangeRateChange }}">
+      </div>
+    </sc-if>
+  </div>
+
+  <div style="max-width:1280px;margin:0 auto;padding:0 32px">
+
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:24px">
+      <span class="text-muted" style="font-size:11px;letter-spacing:0.06em;text-transform:uppercase;width:82px;flex-shrink:0">연도</span>
+      <div class="seg" style="flex-wrap:wrap">
+        <sc-for list="{{ yearFilterOptions }}" as="opt" hint-placeholder-count="5">
+          <button type="button" class="seg-opt" style="border:none;{{ opt.style }}" onClick="{{ opt.onClick }}">{{ opt.label }}</button>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px">
+      <span class="text-muted" style="font-size:11px;letter-spacing:0.06em;text-transform:uppercase;width:82px;flex-shrink:0">월</span>
+      <div class="seg" style="flex-wrap:wrap">
+        <sc-for list="{{ monthOptions }}" as="opt" hint-placeholder-count="13">
+          <button type="button" class="seg-opt" style="border:none;{{ opt.style }}" onClick="{{ opt.onClick }}">{{ opt.label }}</button>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px">
+      <span class="text-muted" style="font-size:11px;letter-spacing:0.06em;text-transform:uppercase;width:82px;flex-shrink:0">주종(대구분)</span>
+      <div class="seg" style="flex-wrap:wrap">
+        <sc-for list="{{ majorOptions }}" as="opt" hint-placeholder-count="13">
+          <button type="button" class="seg-opt" style="border:none;{{ opt.style }}" onClick="{{ opt.onClick }}">{{ opt.label }}</button>
+        </sc-for>
+      </div>
+      <sc-if value="{{ activeCountryChip }}" hint-placeholder-val="{{ false }}">
+        <span class="tag tag-accent" style="cursor:pointer" style-hover="background:var(--color-accent-200)" onClick="{{ activeCountryChip.onClear }}">{{ activeCountryChip.name }} ✕</span>
+      </sc-if>
+    </div>
+
+    <sc-if value="{{ minorOptions }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px">
+        <span class="text-muted" style="font-size:11px;letter-spacing:0.06em;text-transform:uppercase;width:82px;flex-shrink:0">중구분</span>
+        <div class="seg" style="flex-wrap:wrap">
+          <sc-for list="{{ minorOptions }}" as="opt" hint-placeholder-count="4">
+            <button type="button" class="seg-opt" style="border:none;{{ opt.style }}" onClick="{{ opt.onClick }}">{{ opt.label }}</button>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:12px;margin-top:24px">
+      <span class="text-muted" style="font-size:11px;letter-spacing:0.06em;text-transform:uppercase">합계 기준</span>
+      <div class="seg">
+        <sc-for list="{{ totalBasisOptions }}" as="opt" hint-placeholder-count="2">
+          <button type="button" class="seg-opt" style="border:none;{{ opt.style }}" onClick="{{ opt.onClick }}">{{ opt.label }}</button>
+        </sc-for>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:12px">
+      <sc-for list="{{ kpis }}" as="kpi" hint-placeholder-count="4">
+        <div class="card elev-sm" style="padding:20px">
+          <div style="display:flex;gap:10px">
+            <div>
+              <div class="card-kicker">{{ kpi.label }}</div>
+              <div style="font-family:var(--font-heading);font-weight:600;font-size:27px;margin-top:6px">{{ kpi.value }}</div>
+              <div style="font-size:12px;margin-top:6px;color:{{ kpi.deltaColor }}">{{ kpi.deltaText }}</div>
+            </div>
+            <sc-if value="{{ kpi.priceBreakdown }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;flex-direction:column;gap:2px;padding-left:10px;margin-left:2px;border-left:1px solid var(--color-divider);justify-content:center">
+                <sc-for list="{{ kpi.priceBreakdown }}" as="pb" hint-placeholder-count="4">
+                  <div style="font-size:10.5px;white-space:nowrap">
+                    <span class="text-muted">{{ pb.name }}</span>
+                    <span style="font-weight:600;margin-left:3px">{{ pb.priceDisplay }}</span>
+                    <span style="font-weight:600;margin-left:3px;color:{{ pb.yoyColor }}">{{ pb.yoyText }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+          </div>
+          <div class="hr" style="margin:10px 0"></div>
+          <div class="text-muted" style="font-size:11px;line-height:1.5">{{ kpi.sub }}</div>
+        </div>
+      </sc-for>
+    </div>
+
+    <div class="card elev-sm" style="padding:24px;margin-top:16px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:12px">
+        <h3 style="margin:0">월별 수입 추이</h3>
+        <a href="연도별 비교 대시보드.dc.html" class="btn btn-ghost" style="text-decoration:none;font-size:12px">연도별 누적 비교 →</a>
+        <a href="와인 컬러 리포트.dc.html" class="btn btn-ghost" style="text-decoration:none;font-size:12px">와인 컬러 리포트 →</a>
+      </div>
+      <div style="margin-top:12px;margin-bottom:8px">
+        <div style="display:flex;gap:8px;padding-bottom:8px;border-bottom:1px solid var(--color-divider)">
+          <div style="width:88px;flex-shrink:0"></div>
+          <sc-for list="{{ trendYearSummary }}" as="ys" hint-placeholder-count="5">
+            <div style="flex:1;min-width:96px;font-size:12px;font-weight:600">{{ ys.yearLabel }}</div>
+          </sc-for>
+        </div>
+        <div style="display:flex;gap:8px;align-items:baseline;padding-top:8px">
+          <div style="width:88px;flex-shrink:0;font-size:11px;color:var(--color-text);opacity:0.6">수입중량</div>
+          <sc-for list="{{ trendYearSummary }}" as="ys" hint-placeholder-count="5">
+            <div style="flex:1;min-width:96px;display:flex;align-items:baseline;gap:6px">
+              <span style="font-family:var(--font-heading);font-weight:600;font-size:14px">{{ ys.volumeDisplay }}</span>
+              <span style="font-size:11px;font-weight:600;color:{{ ys.volumeYoyColor }}">{{ ys.volumeYoyText }}</span>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display:flex;gap:8px;align-items:baseline;padding-top:6px">
+          <div style="width:88px;flex-shrink:0;font-size:11px;color:var(--color-text);opacity:0.6">수입액</div>
+          <sc-for list="{{ trendYearSummary }}" as="ys" hint-placeholder-count="5">
+            <div style="flex:1;min-width:96px;display:flex;align-items:baseline;gap:6px">
+              <span style="font-family:var(--font-heading);font-weight:600;font-size:14px">{{ ys.valueDisplay }}</span>
+              <span style="font-size:11px;font-weight:600;color:{{ ys.valueYoyColor }}">{{ ys.valueYoyText }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <div class="hr" style="margin:4px 0 12px"></div>
+      <div style="display:flex;gap:20px;flex-wrap:wrap;margin-bottom:4px">
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="width:20px;height:3px;background:var(--color-accent-600);display:inline-block;border-radius:2px"></span>
+          <span style="font-size:12px">금액</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="width:20px;height:3px;background:var(--color-neutral-400);display:inline-block;border-radius:2px"></span>
+          <span style="font-size:12px">중량</span>
+        </div>
+      </div>
+      <div style="position:relative">
+        <svg viewBox="0 0 860 280" style="width:100%;height:auto;display:block" xmlns="http://www.w3.org/2000/svg">
+          <line x1="64" x2="844" y1="{{ trendAxisY }}" y2="{{ trendAxisY }}" stroke="var(--color-divider)" stroke-width="1"></line>
+          <polyline points="{{ trendValueLine }}" fill="none" stroke="var(--color-accent-600)" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"></polyline>
+          <polyline points="{{ trendVolumeLine }}" fill="none" stroke="var(--color-neutral-400)" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"></polyline>
+        </svg>
+        <div style="position:absolute;inset:0;pointer-events:none">
+          <sc-for list="{{ trendValueLabels }}" as="lb" hint-placeholder-count="60">
+            <div style="position:absolute;left:{{ lb.left }};top:{{ lb.top }};transform:translate(-50%,-50%);font-size:11px;font-weight:600;color:var(--color-accent-700);white-space:nowrap">{{ lb.text }}</div>
+          </sc-for>
+          <sc-for list="{{ trendVolumeLabels }}" as="lb" hint-placeholder-count="60">
+            <div style="position:absolute;left:{{ lb.left }};top:{{ lb.top }};transform:translate(-50%,-50%);font-size:11px;font-weight:600;color:var(--color-neutral-600);white-space:nowrap">{{ lb.text }}</div>
+          </sc-for>
+          <sc-for list="{{ trendXLabels }}" as="xl" hint-placeholder-count="60">
+            <sc-if value="{{ xl.month }}" hint-placeholder-val="{{ false }}">
+              <div style="position:absolute;left:{{ xl.left }};top:90%;transform:translate(-50%,-50%);font-size:10px;color:var(--color-text);opacity:0.7;white-space:nowrap">{{ xl.month }}</div>
+            </sc-if>
+            <sc-if value="{{ xl.year }}" hint-placeholder-val="{{ false }}">
+              <div style="position:absolute;left:{{ xl.left }};top:94.3%;transform:translate(-50%,-50%);font-size:10px;font-weight:600;color:var(--color-text);opacity:0.85;white-space:nowrap">{{ xl.year }}</div>
+            </sc-if>
+          </sc-for>
+        </div>
+      </div>
+      <div class="text-muted" style="font-size:11px;margin-top:6px">단위 · 금액: {{ moneyUnitLabel }} / 중량: milL</div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-top:16px">
+      <div class="card elev-sm" style="padding:24px">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap">
+          <h3 style="margin:0 0 4px">국가별 순위</h3>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div class="seg">
+              <sc-for list="{{ metricOptions }}" as="opt" hint-placeholder-count="2">
+                <button type="button" class="seg-opt" style="border:none;{{ opt.style }}" onClick="{{ opt.onClick }}">{{ opt.label }}</button>
+              </sc-for>
+            </div>
+            <button type="button" class="btn btn-ghost" style="font-size:12px" onClick="{{ toggleShowAll }}">{{ showAllLabel }}</button>
+          </div>
+        </div>
+        <div class="text-muted" style="font-size:11px;margin-bottom:14px">{{ windowLabel }} · 클릭하여 필터링</div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <sc-for list="{{ rankingBars }}" as="rb" hint-placeholder-count="10">
+            <div style="cursor:pointer;border-radius:6px;padding:4px 6px;margin:-4px -6px" style-hover="background:color-mix(in srgb, var(--color-text) 5%, transparent)" onClick="{{ rb.onClick }}">
+              <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px">
+                <span style="font-weight:{{ rb.fontWeight }}">{{ rb.name }}</span>
+                <span style="display:flex;gap:8px;align-items:baseline">
+                  <span class="text-muted" style="font-size:11px">{{ rb.yoyText }}</span>
+                  <span style="font-family:var(--font-heading);font-weight:600">{{ rb.valueDisplay }}</span>
+                </span>
+              </div>
+              <div style="height:8px;border-radius:4px;background:var(--color-surface);overflow:hidden" title="{{ rb.name }}: {{ rb.valueDisplay }} ({{ rb.yoyText }})">
+                <div style="height:100%;width:{{ rb.widthPct }}%;background:{{ rb.barColor }};border-radius:4px"></div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div class="card elev-sm" style="padding:24px">
+        <h3 style="margin:0 0 4px">주종별 순위</h3>
+        <div class="text-muted" style="font-size:11px;margin-bottom:14px">{{ windowLabel }} · 클릭하여 필터링</div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <sc-for list="{{ majorRankingBars }}" as="mb" hint-placeholder-count="12">
+            <div style="cursor:pointer;border-radius:6px;padding:4px 6px;margin:-4px -6px" style-hover="background:color-mix(in srgb, var(--color-text) 5%, transparent)" onClick="{{ mb.onClick }}">
+              <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px">
+                <span style="font-weight:{{ mb.fontWeight }}">{{ mb.name }}</span>
+                <span style="display:flex;gap:8px;align-items:baseline">
+                  <span class="text-muted" style="font-size:11px">{{ mb.yoyText }}</span>
+                  <span style="font-family:var(--font-heading);font-weight:600">{{ mb.valueDisplay }}</span>
+                </span>
+              </div>
+              <div style="height:8px;border-radius:4px;background:var(--color-surface);overflow:hidden" title="{{ mb.name }}: {{ mb.valueDisplay }} ({{ mb.yoyText }})">
+                <div style="height:100%;width:{{ mb.widthPct }}%;background:{{ mb.barColor }};border-radius:4px"></div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div class="card elev-sm" style="padding:24px">
+        <h3 style="margin:0 0 4px">{{ donutTitle }}</h3>
+        <div class="text-muted" style="font-size:11px;margin-bottom:14px">{{ windowLabel }} · 금액 기준</div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:28px">
+          <div style="width:220px;height:220px;border-radius:50%;background:{{ majorDonutStyle }};flex:none;box-shadow:var(--shadow-sm)" title="{{ donutHoverTitle }}"></div>
+          <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:8px 16px;width:100%">
+            <sc-for list="{{ majorLegend }}" as="tl" hint-placeholder-count="12">
+              <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:6px;font-size:12px;cursor:default" title="{{ tl.hoverTitle }}">
+                <span style="display:flex;align-items:flex-start;gap:6px;min-width:0">
+                  <span style="width:9px;height:9px;border-radius:2px;background:{{ tl.color }};display:inline-block;flex-shrink:0;margin-top:3px"></span>
+                  <span class="text-muted" style="min-width:0;word-break:keep-all">{{ tl.name }}</span>
+                </span>
+                <span style="font-family:var(--font-heading);font-weight:600;flex-shrink:0">{{ tl.pct }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card elev-sm" style="padding:24px;margin-top:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:4px">
+        <h3 style="margin:0">상세 내역</h3>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <select class="input" style="width:auto;min-height:32px;padding:4px 8px;font-size:13px" value="{{ selectedCountryValue }}" onChange="{{ onCountryChange }}">
+            <sc-for list="{{ countryFilterOptions }}" as="opt" hint-placeholder-count="20">
+              <option value="{{ opt.id }}">{{ opt.name }}</option>
+            </sc-for>
+          </select>
+          <select class="input" style="width:auto;min-height:32px;padding:4px 8px;font-size:13px" value="{{ selectedTableMinorValue }}" onChange="{{ onTableMinorChange }}">
+            <sc-for list="{{ tableMinorOptions }}" as="opt" hint-placeholder-count="10">
+              <option value="{{ opt.id }}">{{ opt.name }}</option>
+            </sc-for>
+          </select>
+        </div>
+      </div>
+      <div class="text-muted" style="font-size:11px;margin-bottom:14px">{{ windowLabel }} · 국가 × 대구분 × 중구분 · 열 제목 클릭 시 정렬</div>
+      <div style="overflow-x:auto">
+        <table class="table">
+          <thead>
+            <tr>
+              <th style="cursor:pointer" onClick="{{ sortCountry }}">국가 {{ sortIcons.country }}</th>
+              <th style="cursor:pointer" onClick="{{ sortMajor }}">대구분 {{ sortIcons.major }}</th>
+              <th style="cursor:pointer" onClick="{{ sortMinor }}">중구분 {{ sortIcons.minor }}</th>
+              <th style="cursor:pointer" onClick="{{ sortVolume }}">수입중량 {{ sortIcons.volume }}</th>
+              <th style="cursor:pointer" onClick="{{ sortValue }}">수입금액 {{ sortIcons.value }}</th>
+              <th style="cursor:pointer" onClick="{{ sortPrice }}">평균단가 {{ sortIcons.price }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <sc-for list="{{ tableRows }}" as="row" hint-placeholder-count="16">
+              <tr>
+                <td>{{ row.country }}</td>
+                <td>{{ row.major }}</td>
+                <td>{{ row.minor }}</td>
+                <td>{{ row.volumeDisplay }} <span style="font-weight:600;color:{{ row.volumeYoyColor }}">{{ row.volumeYoyText }}</span></td>
+                <td>{{ row.valueDisplay }} <span style="font-weight:600;color:{{ row.valueYoyColor }}">{{ row.valueYoyText }}</span></td>
+                <td>{{ row.priceDisplay }} <span style="font-weight:600;color:{{ row.priceYoyColor }}">{{ row.priceYoyText }}</span></td>
+              </tr>
+            </sc-for>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <p class="text-muted" style="font-size:11px;margin-top:20px;line-height:1.6">
+      * 데이터 출처: 관세청 품목별 수출입실적 Open API(nitemtrade, apis.data.go.kr). 금액은 USD, 중량은 kg 기준이며 관세청 발표 주기(월 1회)에 맞춰 갱신됩니다.
+    </p>
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { major: 'all', minor: null, selectedYears: ['2022', '2023', '2024', '2025', '2026'], selectedMonths: [], totalBasis: 'yearly', metric: 'value', currency: 'USD', exchangeRate: 1350, country: null, tableMinor: null, sortKey: 'value', sortDir: 'desc', showAll: false, isUpdating: false, updateMessage: null };
+  triggerForceUpdate() {
+    if (this.state.isUpdating) return;
+    this.setState({ isUpdating: true, updateMessage: null });
+    fetch('./api/reload-recent-month', { method: 'POST', cache: 'no-store' })
+      .then(r => r.json())
+      .then(data => {
+        this.setState({ isUpdating: false, updateMessage: '갱신 완료 (' + data.rows + '행) · 새로고침 중…' });
+        setTimeout(() => location.reload(), 1000);
+      })
+      .catch(err => {
+        this.setState({ isUpdating: false, updateMessage: '갱신 실패: ' + err.message });
+      });
+  }
+  toggleYear(id) { this.setState(st => ({ selectedYears: st.selectedYears.includes(id) ? st.selectedYears.filter(y => y !== id) : [...st.selectedYears, id].sort() })); }
+  toggleMonth(id) {
+    if (id === 'all') { this.setState({ selectedMonths: [] }); return; }
+    this.setState(st => ({ selectedMonths: st.selectedMonths.includes(id) ? st.selectedMonths.filter(m => m !== id) : [...st.selectedMonths, id].sort((a, b) => Number(a) - Number(b)) }));
+  }
+
+  componentDidMount() {
+    import('./liquorData.js').then(mod => { this.lib = mod; this.forceUpdate(); });
+  }
+
+  sumField(rows, field) { return rows.reduce((a, r) => a + r[field], 0); }
+  pctDiff(c, p) { return p === 0 ? 0 : (c - p) / p * 100; }
+  deltaMeta(pctVal) {
+    if (!isFinite(pctVal)) pctVal = 0;
+    const positive = pctVal >= 0;
+    return { text: (positive ? '▲ ' : '▼ ') + Math.abs(pctVal).toFixed(1) + '%', color: positive ? 'var(--color-accent-700)' : 'var(--color-neutral-700)' };
+  }
+  fmtMoney(usd, currency) {
+    if (currency === 'KRW') { const eok = usd * this.state.exchangeRate / 1e8; return eok.toLocaleString('ko-KR', { maximumFractionDigits: 1, minimumFractionDigits: 1 }) + '억원'; }
+    const m = usd / 1e6; return '$' + m.toLocaleString('en-US', { maximumFractionDigits: 1, minimumFractionDigits: 1 }) + 'M';
+  }
+  fmtVolume(kg) { const kl = kg / 1000; return Math.round(kl).toLocaleString('ko-KR') + ' kL'; }
+  fmtVolumeML(kg) { const ml = kg / 1e6; return ml.toLocaleString('ko-KR', { maximumFractionDigits: 1 }) + ' milL'; }
+  fmtUnitPrice(usdPerKg, currency) {
+    if (currency === 'KRW') return '₩' + Math.round(usdPerKg * this.state.exchangeRate).toLocaleString('ko-KR') + '/kg';
+    return '$' + usdPerKg.toFixed(2) + '/kg';
+  }
+  segStyle(active) {
+    return active
+      ? 'background:color-mix(in srgb, var(--color-accent) 12%, transparent);color:var(--color-accent-700);box-shadow:inset 0 0 0 1px var(--color-accent)'
+      : 'background:transparent;color:var(--color-text)';
+  }
+  setSort(key) { this.setState(st => ({ sortKey: key, sortDir: st.sortKey === key ? (st.sortDir === 'desc' ? 'asc' : 'desc') : 'desc' })); }
+  toggleCountry(id) { this.setState(st => ({ country: st.country === id ? null : id })); }
+
+  renderVals() {
+    if (!this.lib) return { windowLabel: undefined };
+    const { COUNTRIES, MAJORS, generateSnapshot } = this.lib;
+    const s = this.state;
+    const currency = s.currency, metric = s.metric;
+    const { rows, monthsList } = generateSnapshot();
+    const pad2 = n => String(n).padStart(2, '0');
+    const latestPeriod = monthsList[monthsList.length - 1];
+    const dataSourceLabel = '관세청 수출입무역통계(nitemtrade) · ' + latestPeriod.year + '.' + pad2(latestPeriod.month) + ' 기준';
+
+    const keysOf = list => new Set(list.map(m => m.key));
+    const selYearsNum = (s.selectedYears || []).map(Number).sort((a, b) => a - b);
+    const selMonthsNum = (s.selectedMonths || []).map(Number);
+    const monthSuffix = selMonthsNum.length ? (' · ' + selMonthsNum.map(m => m + '월').join(',')) : '';
+
+    // 전체 섹션(KPI/국가별·주종별 순위/도넛/트렌드/상세 내역) 공통 기준: 선택 연도 전체 합산이
+    // 아니라 선택 연도 중 최고 연도(topYear) vs 그 직전 연도로 비교한다.
+    const topYear = selYearsNum.length ? Math.max(...selYearsNum) : monthsList[monthsList.length - 1].year;
+    const windowLabel = topYear + '년' + monthSuffix;
+    const kpiCurMonthsBase = monthsList.filter(m => m.year === topYear);
+    const kpiMaxM = kpiCurMonthsBase.length ? kpiCurMonthsBase[kpiCurMonthsBase.length - 1].month : 12;
+    const kpiPrevMonthsBase = monthsList.filter(m => m.year === topYear - 1 && m.month <= kpiMaxM);
+    const kpiCurMonths = selMonthsNum.length ? kpiCurMonthsBase.filter(m => selMonthsNum.includes(m.month)) : kpiCurMonthsBase;
+    const kpiPrevMonths = selMonthsNum.length ? kpiPrevMonthsBase.filter(m => selMonthsNum.includes(m.month)) : kpiPrevMonthsBase;
+    const kpiCurKeys = keysOf(kpiCurMonths), kpiPrevKeys = keysOf(kpiPrevMonths);
+    const kpiCurRowsAll = rows.filter(r => kpiCurKeys.has(r.key));
+    const kpiPrevRowsAll = rows.filter(r => kpiPrevKeys.has(r.key));
+
+    const curValueAll = this.sumField(kpiCurRowsAll, 'value'), prevValueAll = this.sumField(kpiPrevRowsAll, 'value');
+    const curWineAll = this.sumField(kpiCurRowsAll.filter(r => r.major === '와인'), 'value');
+    const prevWineAll = this.sumField(kpiPrevRowsAll.filter(r => r.major === '와인'), 'value');
+    const curShare = curValueAll ? curWineAll / curValueAll * 100 : 0;
+    const prevShare = prevValueAll ? prevWineAll / prevValueAll * 100 : 0;
+    const shareDiff = curShare - prevShare;
+    const shareDelta = { text: (shareDiff >= 0 ? '▲ +' : '▼ ') + Math.abs(shareDiff).toFixed(1) + 'pp YoY', color: shareDiff >= 0 ? 'var(--color-accent-700)' : 'var(--color-neutral-700)' };
+
+    const matchesFilter = r => (s.major === 'all' || r.major === s.major) && (!s.minor || r.minor === s.minor);
+    const kpiCurRows = kpiCurRowsAll.filter(matchesFilter);
+    const kpiPrevRows = kpiPrevRowsAll.filter(matchesFilter);
+
+    const latestMonth = monthsList[monthsList.length - 1].month;
+    // "최근 1년"은 연도 선택과 무관하게 데이터상 가장 최근 12개월 vs 그 직전 12개월(진짜 rolling).
+    // 예전엔 "연도별"과 소스가 같아서 버튼을 눌러도 값이 안 바뀌는 것처럼 보였다.
+    const rollingCurMonthsBase = monthsList.slice(-12);
+    const rollingPrevMonthsBase = monthsList.slice(-24, -12);
+    const rollingCurMonths = selMonthsNum.length ? rollingCurMonthsBase.filter(m => selMonthsNum.includes(m.month)) : rollingCurMonthsBase;
+    const rollingPrevMonths = selMonthsNum.length ? rollingPrevMonthsBase.filter(m => selMonthsNum.includes(m.month)) : rollingPrevMonthsBase;
+    const rollingKeys = keysOf(rollingCurMonths), rollingPrevKeys = keysOf(rollingPrevMonths);
+    const rollingCurRows = rows.filter(r => rollingKeys.has(r.key) && matchesFilter(r));
+    const rollingPrevRows = rows.filter(r => rollingPrevKeys.has(r.key) && matchesFilter(r));
+    const rollingPeriodTag = '최근 12개월' + monthSuffix;
+    const ytdCurMonthsRaw = kpiCurMonths.filter(m => m.month <= latestMonth);
+    const ytdPrevMonthsRaw = kpiPrevMonths.filter(m => m.month <= latestMonth);
+    const ytdCurMonths = ytdCurMonthsRaw.length ? ytdCurMonthsRaw : kpiCurMonths;
+    const ytdPrevMonths = ytdPrevMonthsRaw.length ? ytdPrevMonthsRaw : kpiPrevMonths;
+    const ytdKeys = keysOf(ytdCurMonths), ytdPrevKeys = keysOf(ytdPrevMonths);
+    const ytdCurRows = rows.filter(r => ytdKeys.has(r.key) && matchesFilter(r));
+    const ytdPrevRows = rows.filter(r => ytdPrevKeys.has(r.key) && matchesFilter(r));
+
+    const yearlyCurMonths = kpiCurMonths;
+    const yearlyPrevMonths = kpiPrevMonths;
+    const yearlyKeys = keysOf(yearlyCurMonths), yearlyPrevKeys = keysOf(yearlyPrevMonths);
+    const yearlyCurRows = rows.filter(r => yearlyKeys.has(r.key) && matchesFilter(r));
+    const yearlyPrevRows = rows.filter(r => yearlyPrevKeys.has(r.key) && matchesFilter(r));
+
+    const basisCurRows = s.totalBasis === 'ytd' ? ytdCurRows : s.totalBasis === 'yearly' ? yearlyCurRows : rollingCurRows;
+    const basisPrevRows = s.totalBasis === 'ytd' ? ytdPrevRows : s.totalBasis === 'yearly' ? yearlyPrevRows : rollingPrevRows;
+    const periodTag = s.totalBasis === 'ytd' ? ('YTD · ' + ytdCurMonths[0].year + '.' + pad2(ytdCurMonths[0].month) + '~' + pad2(ytdCurMonths[ytdCurMonths.length - 1].month))
+      : s.totalBasis === 'yearly' ? (topYear + '년' + monthSuffix)
+      : rollingPeriodTag;
+    const curValue = this.sumField(basisCurRows, 'value'), prevValue = this.sumField(basisPrevRows, 'value');
+    const curVolume = this.sumField(basisCurRows, 'volume'), prevVolume = this.sumField(basisPrevRows, 'volume');
+    const curPrice = curVolume ? curValue / curVolume : 0, prevPrice = prevVolume ? prevValue / prevVolume : 0;
+    const dV = this.deltaMeta(this.pctDiff(curValue, prevValue));
+    const dVol = this.deltaMeta(this.pctDiff(curVolume, prevVolume));
+    const dP = this.deltaMeta(this.pctDiff(curPrice, prevPrice));
+
+    const ytdCurValue = this.sumField(ytdCurRows, 'value'), ytdPrevValue = this.sumField(ytdPrevRows, 'value');
+    const ytdCurVolume = this.sumField(ytdCurRows, 'volume'), ytdPrevVolume = this.sumField(ytdPrevRows, 'volume');
+    const dYtdV = this.deltaMeta(this.pctDiff(ytdCurValue, ytdPrevValue));
+    const dYtdVol = this.deltaMeta(this.pctDiff(ytdCurVolume, ytdPrevVolume));
+
+    // 와인 선택 시(색상 미지정) 평균 수입단가 카드 옆에 컬러별(레드/화이트/스파클링/기타) 평균단가를 덧붙인다.
+    const priceBreakdown = (s.major === '와인' && !s.minor) ? (() => {
+      const majorDef = MAJORS.find(m => m.major === '와인');
+      if (!majorDef) return null;
+      return majorDef.minors.map(mn => {
+        const curM = basisCurRows.filter(r => r.minor === mn.minor);
+        const prevM = basisPrevRows.filter(r => r.minor === mn.minor);
+        const curMV = this.sumField(curM, 'value'), curMQ = this.sumField(curM, 'volume');
+        const prevMV = this.sumField(prevM, 'value'), prevMQ = this.sumField(prevM, 'volume');
+        const curMPrice = curMQ ? curMV / curMQ : 0, prevMPrice = prevMQ ? prevMV / prevMQ : 0;
+        const d = this.deltaMeta(this.pctDiff(curMPrice, prevMPrice));
+        const priceDisplay = currency === 'KRW' ? '₩' + Math.round(curMPrice * s.exchangeRate).toLocaleString('ko-KR') + '/L' : '$' + curMPrice.toFixed(1) + '/L';
+        return { name: mn.minor.replace(' 와인', ''), priceDisplay, yoyText: d.text, yoyColor: d.color };
+      });
+    })() : null;
+
+    const kpis = [
+      { label: '수입액 · ' + periodTag, value: this.fmtMoney(curValue, currency), deltaText: dV.text + ' YoY', deltaColor: dV.color, sub: 'YTD 성장률 ' + dYtdV.text + ' · ' + (s.major === 'all' ? '전체 주류' : s.major) + ' 기준' },
+      { label: '수입중량 · ' + periodTag, value: this.fmtVolumeML(curVolume), deltaText: dVol.text + ' YoY', deltaColor: dVol.color, sub: 'YTD 성장률 ' + dYtdVol.text + ' · ' + (s.major === 'all' ? '전체 주류' : s.major) + ' 기준' },
+      { label: '평균 수입단가', value: priceBreakdown ? this.fmtUnitPrice(curPrice, currency).replace('/kg', '/L') : this.fmtUnitPrice(curPrice, currency), deltaText: dP.text + ' YoY', deltaColor: dP.color, sub: priceBreakdown ? 'L당 단가' : 'kg당 단가', priceBreakdown },
+      { label: '전체 주류 대비 포도주 비중', value: curShare.toFixed(1) + '%', deltaText: shareDelta.text, deltaColor: shareDelta.color, sub: '수입액 기준' },
+    ];
+
+    const yearsAll = [2022, 2023, 2024, 2025, 2026];
+    const yearsToShow = selYearsNum.length ? selYearsNum : [topYear - 1, topYear];
+    const filtered = rows.filter(matchesFilter);
+    const monthsInScope = monthsList.filter(m => yearsToShow.includes(m.year));
+    const n = monthsInScope.length;
+    const marginLeft = 64, marginRight = 16, plotTop = 40, plotH = 175;
+    const plotW = 860 - marginLeft - marginRight;
+    const axisY = plotTop + plotH;
+    const slotW = plotW / n;
+    const valuePerMonth = monthsInScope.map(m => this.sumField(filtered.filter(r => r.year === m.year && r.month === m.month), 'value'));
+    const volumePerMonth = monthsInScope.map(m => this.sumField(filtered.filter(r => r.year === m.year && r.month === m.month), 'volume'));
+    // 축을 0부터 시작하면 실제 등락폭이 눌려 보여서, 데이터 min~max 구간만 밴드에 꽉 채워
+    // 그린다 — 낙폭/등락이 시각적으로 뚜렷하게 보이도록 하는 의도적 스케일.
+    const minValue = Math.min(...valuePerMonth) * 0.9;
+    const maxValue = Math.max(...valuePerMonth) * 1.08;
+    const minVolume = Math.min(...volumePerMonth) * 0.9;
+    const maxVolume = Math.max(...volumePerMonth) * 1.08;
+    const valueSpan = Math.max(1, maxValue - minValue);
+    const volumeSpan = Math.max(1, maxVolume - minVolume);
+    const xAt = i => marginLeft + (i + 0.5) * slotW;
+    // 금액/중량을 같은 높이에 겹쳐 그리면 두 선이 서로 교차해 보여서, 위/아래 두 밴드로
+    // 나눠 각자 독립된(보조축 개념) 스케일로 그린다 — 물리적으로 겹칠 수 없게 된다.
+    const bandGap = 16;
+    const bandH = (plotH - bandGap) / 2;
+    const valueBandTop = plotTop, valueBandBottom = plotTop + bandH;
+    const volumeBandTop = plotTop + bandH + bandGap, volumeBandBottom = plotTop + plotH;
+    const yValueAt = i => valueBandBottom - ((valuePerMonth[i] - minValue) / valueSpan) * bandH;
+    const yVolumeAt = i => volumeBandBottom - ((volumePerMonth[i] - minVolume) / volumeSpan) * bandH;
+    const shortMoney = (usd) => Math.round(currency === 'KRW' ? usd * s.exchangeRate / 1e8 : usd / 1e6).toString();
+    const shortVolume = (kg) => (kg / 1e6).toFixed(1);
+
+    const trendValueLine = monthsInScope.map((m, i) => xAt(i).toFixed(1) + ',' + yValueAt(i).toFixed(1)).join(' ');
+    const trendVolumeLine = monthsInScope.map((m, i) => xAt(i).toFixed(1) + ',' + yVolumeAt(i).toFixed(1)).join(' ');
+    const dirLabel = (arr, i) => (i === 0 ? arr[i] >= arr[1] : arr[i] >= arr[i - 1]);
+    // SVG 안에 sc-for/sc-if로 동적 <text>를 넣으면 SVG 네임스페이스 문제로 렌더링이 안 되는
+    // 경우가 있어, 라벨은 SVG 위에 겹치는 HTML 오버레이(퍼센트 좌표)로 그린다.
+    const pctX = x => (x / 860 * 100).toFixed(2) + '%';
+    const pctY = y => (y / 280 * 100).toFixed(2) + '%';
+    // X축 월 눈금은 3,6,9,12월만 (1월은 연도 라벨(Y22 등)이 이미 그 자리에 나오므로 M01은 생략). 선은 각 연도 실제 데이터 끝까지 그대로 그리되,
+    // 데이터 값 라벨은 최종 연도(latestMonth)와 같은 달까지만 — 다른 연도도 6월까지만 라벨을 단다.
+    const labelMonths = [3, 6, 9, 12];
+    const trendValueLabels = monthsInScope
+      .map((m, i) => ({ m, i }))
+      .filter(({ m }) => m.month <= latestMonth)
+      .map(({ m, i }) => ({ left: pctX(xAt(i)), top: pctY(yValueAt(i) + (dirLabel(valuePerMonth, i) ? -8 : 14)), text: shortMoney(valuePerMonth[i]) }));
+    const trendVolumeLabels = monthsInScope
+      .map((m, i) => ({ m, i }))
+      .filter(({ m }) => m.month <= latestMonth)
+      .map(({ m, i }) => ({ left: pctX(xAt(i)), top: pctY(yVolumeAt(i) + (dirLabel(volumePerMonth, i) ? -8 : 14)), text: shortVolume(volumePerMonth[i]) }));
+    const trendXLabels = monthsInScope.map((m, i) => ({ left: pctX(xAt(i)), month: labelMonths.includes(m.month) ? 'M' + pad2(m.month) : false, year: m.month === 1 || i === 0 ? 'Y' + String(m.year).slice(-2) : false }));
+    const trendAxisY = axisY;
+
+    // 연도별 합계 + YoY(연합계 기준, 최종년도는 YTD) — YoY는 +파랑/-빨강
+    const trendDelta = (pctVal) => {
+      if (pctVal === null) return { text: '—', color: 'var(--color-text)' };
+      if (!isFinite(pctVal)) pctVal = 0;
+      const positive = pctVal >= 0;
+      return { text: 'YoY ' + (positive ? '+' : '') + pctVal.toFixed(1) + '%', color: positive ? '#2563eb' : '#dc2626' };
+    };
+    const trendYearSummary = yearsToShow.map(y => {
+      const isCurrent = y === topYear;
+      const monthCap = isCurrent ? latestMonth : 12;
+      const curYearRows = filtered.filter(r => r.year === y && r.month <= monthCap);
+      const prevYearRows = filtered.filter(r => r.year === y - 1 && r.month <= monthCap);
+      const curV = this.sumField(curYearRows, 'value'), prevV = this.sumField(prevYearRows, 'value');
+      const curQ = this.sumField(curYearRows, 'volume'), prevQ = this.sumField(prevYearRows, 'volume');
+      const vDelta = trendDelta(prevV ? this.pctDiff(curV, prevV) : null);
+      const qDelta = trendDelta(prevQ ? this.pctDiff(curQ, prevQ) : null);
+      return {
+        yearLabel: y + '년' + (isCurrent ? ' · ' + monthCap + '월 YTD' : ''),
+        valueDisplay: this.fmtMoney(curV, currency), valueYoyText: vDelta.text, valueYoyColor: vDelta.color,
+        volumeDisplay: this.fmtVolumeML(curQ), volumeYoyText: qDelta.text, volumeYoyColor: qDelta.color,
+      };
+    });
+    const moneyUnitLabel = currency === 'KRW' ? '억원' : '백만달러';
+
+    const curRowsByMajor = kpiCurRowsAll.filter(matchesFilter);
+    const prevRowsByMajor = kpiPrevRowsAll.filter(matchesFilter);
+    const rankListFull = COUNTRIES.map(c => {
+      const cRows = curRowsByMajor.filter(r => r.countryId === c.id), pRows = prevRowsByMajor.filter(r => r.countryId === c.id);
+      return { id: c.id, name: c.name, value: this.sumField(cRows, 'value'), volume: this.sumField(cRows, 'volume'), prevValue: this.sumField(pRows, 'value'), prevVolume: this.sumField(pRows, 'volume') };
+    }).sort((a, b) => b[metric] - a[metric]);
+    const rankList = s.showAll ? rankListFull : rankListFull.slice(0, 10);
+    const maxBar = rankListFull.length ? rankListFull[0][metric] : 1;
+    const rankingBars = rankList.map(c => {
+      const yoy = this.deltaMeta(this.pctDiff(c[metric], metric === 'value' ? c.prevValue : c.prevVolume));
+      return {
+        name: c.name, valueDisplay: metric === 'value' ? this.fmtMoney(c.value, currency) : this.fmtVolumeML(c.volume),
+        widthPct: maxBar ? (c[metric] / maxBar * 100) : 0,
+        barColor: s.country === c.id ? 'var(--color-accent-600)' : 'var(--color-accent-300)',
+        fontWeight: s.country === c.id ? 600 : 400,
+        yoyText: yoy.text, onClick: () => this.toggleCountry(c.id),
+      };
+    });
+
+    const majorRankBase = kpiCurRowsAll.filter(r => !s.country || r.countryId === s.country);
+    const majorPrevBase = kpiPrevRowsAll.filter(r => !s.country || r.countryId === s.country);
+    const majorRankListFull = MAJORS.map(m => {
+      const cRows = majorRankBase.filter(r => r.major === m.major), pRows = majorPrevBase.filter(r => r.major === m.major);
+      return { major: m.major, value: this.sumField(cRows, 'value'), volume: this.sumField(cRows, 'volume'), prevValue: this.sumField(pRows, 'value'), prevVolume: this.sumField(pRows, 'volume') };
+    }).sort((a, b) => b[metric] - a[metric]);
+    const maxMajorBar = majorRankListFull.length ? majorRankListFull[0][metric] : 1;
+    const majorRankingBars = majorRankListFull.slice(0, 10).map(m => {
+      const yoy = this.deltaMeta(this.pctDiff(m[metric], metric === 'value' ? m.prevValue : m.prevVolume));
+      const isActive = s.major === m.major;
+      return {
+        name: m.major, valueDisplay: metric === 'value' ? this.fmtMoney(m.value, currency) : this.fmtVolumeML(m.volume),
+        widthPct: maxMajorBar ? (m[metric] / maxMajorBar * 100) : 0,
+        barColor: isActive ? 'var(--color-accent-600)' : 'var(--color-accent-300)',
+        fontWeight: isActive ? 600 : 400,
+        yoyText: yoy.text, onClick: () => this.setState({ major: isActive ? 'all' : m.major, minor: null }),
+      };
+    });
+
+    const curRowsForDonut = kpiCurRowsAll.filter(r => !s.country || r.countryId === s.country);
+    const minorColorCycle = ['var(--color-accent-700)', 'var(--color-accent-500)', 'var(--color-accent-300)', 'var(--color-neutral-500)', 'var(--color-accent-900)', 'var(--color-neutral-700)'];
+    let donutTitle, majorLegend, majorDonutStyle, donutHoverTitle;
+    if (s.major === 'all') {
+      const donutTotal = this.sumField(curRowsForDonut, 'value');
+      let cum = 0; const segs = [];
+      majorLegend = MAJORS.map(m => {
+        const val = this.sumField(curRowsForDonut.filter(r => r.major === m.major), 'value');
+        const pctv = donutTotal > 0 ? (val / donutTotal * 100) : 0;
+        const start = cum; cum += pctv;
+        segs.push(m.color + ' ' + start.toFixed(2) + '% ' + cum.toFixed(2) + '%');
+        return { name: m.major, pct: pctv.toFixed(1) + '%', color: m.color, valueDisplay: this.fmtMoney(val, currency) };
+      });
+      majorDonutStyle = 'conic-gradient(' + segs.join(', ') + ')';
+      donutTitle = '주종별(대구분) 비중';
+    } else {
+      const majorDef = MAJORS.find(m => m.major === s.major);
+      const scoped = curRowsForDonut.filter(r => r.major === s.major);
+      const donutTotal = this.sumField(scoped, 'value');
+      let cum = 0; const segs = [];
+      majorLegend = majorDef.minors.map((mn, i) => {
+        const val = this.sumField(scoped.filter(r => r.minor === mn.minor), 'value');
+        const pctv = donutTotal > 0 ? (val / donutTotal * 100) : 0;
+        const start = cum; cum += pctv;
+        const color = minorColorCycle[i % minorColorCycle.length];
+        segs.push(color + ' ' + start.toFixed(2) + '% ' + cum.toFixed(2) + '%');
+        return { name: mn.minor, pct: pctv.toFixed(1) + '%', color, valueDisplay: this.fmtMoney(val, currency) };
+      });
+      majorDonutStyle = 'conic-gradient(' + segs.join(', ') + ')';
+      donutTitle = s.major + ' · 중구분 비중';
+    }
+    majorLegend = majorLegend.slice().sort((a, b) => parseFloat(b.pct) - parseFloat(a.pct));
+    donutHoverTitle = majorLegend.map(l => l.name + ': ' + l.valueDisplay + ' (' + l.pct + ')').join('\n');
+    majorLegend = majorLegend.map(l => ({ ...l, hoverTitle: l.name + ': ' + l.valueDisplay + ' (' + l.pct + ')' }));
+
+    const majorOptsBase = [{ id: 'all', label: '전체' }, ...MAJORS.map(m => ({ id: m.major, label: m.major }))];
+    const activeMajorDef = s.major !== 'all' ? MAJORS.find(m => m.major === s.major) : null;
+    const minorOptsBase = activeMajorDef ? [{ id: 'all', label: '전체' }, ...activeMajorDef.minors.map(mn => ({ id: mn.minor, label: mn.minor }))] : null;
+
+    // 상세 내역 표 전용 중구분 필터 (표 안의 드롭다운) — 전역 주종/중구분 필터와 별개로 표만 좁힌다.
+    const tableMinorOptions = (() => {
+      const src = activeMajorDef ? activeMajorDef.minors.map(mn => mn.minor) : [...new Set(MAJORS.flatMap(m => m.minors.map(mn => mn.minor)))];
+      return [{ id: 'all', name: '전체 중구분' }, ...src.map(name => ({ id: name, name }))];
+    })();
+
+    const tableSrc = kpiCurRowsAll.filter(r => matchesFilter(r) && (!s.country || r.countryId === s.country) && (!s.tableMinor || r.minor === s.tableMinor));
+    const tablePrevSrc = kpiPrevRowsAll.filter(r => matchesFilter(r) && (!s.country || r.countryId === s.country) && (!s.tableMinor || r.minor === s.tableMinor));
+    const map = new Map();
+    tableSrc.forEach(r => {
+      const k = r.countryId + '|' + r.major + '|' + r.minor;
+      if (!map.has(k)) map.set(k, { country: r.country, countryId: r.countryId, major: r.major, minor: r.minor, volume: 0, value: 0 });
+      const o = map.get(k); o.volume += r.volume; o.value += r.value;
+    });
+    const prevMap = new Map();
+    tablePrevSrc.forEach(r => {
+      const k = r.countryId + '|' + r.major + '|' + r.minor;
+      if (!prevMap.has(k)) prevMap.set(k, { volume: 0, value: 0 });
+      const o = prevMap.get(k); o.volume += r.volume; o.value += r.value;
+    });
+    // 표 안의 증감 배지: +파랑/-빨강 (YoY 단어 없이 값 옆에 바로 붙인다)
+    const pctBadge = (pctVal) => {
+      if (pctVal === null) return { text: '—', color: 'var(--color-text)' };
+      if (!isFinite(pctVal)) pctVal = 0;
+      const positive = pctVal >= 0;
+      return { text: (positive ? '+' : '') + pctVal.toFixed(1) + '%', color: positive ? '#2563eb' : '#dc2626' };
+    };
+    let rowsArr = [...map.values()].map(o => {
+      const key = o.countryId + '|' + o.major + '|' + o.minor;
+      const prev = prevMap.get(key) || { value: 0, volume: 0 };
+      const price = o.volume ? o.value / o.volume : 0;
+      const prevPrice = prev.volume ? prev.value / prev.volume : 0;
+      return {
+        ...o, price,
+        yoyPct: this.pctDiff(o.value, prev.value),
+        volumeYoyPct: prev.volume ? this.pctDiff(o.volume, prev.volume) : null,
+        valueYoyPct: prev.value ? this.pctDiff(o.value, prev.value) : null,
+        priceYoyPct: prevPrice ? this.pctDiff(price, prevPrice) : null,
+      };
+    });
+    const sortKey = s.sortKey, sortDir = s.sortDir;
+    const cmp = (a, b) => {
+      let av = a[sortKey], bv = b[sortKey];
+      if (typeof av === 'string') return sortDir === 'desc' ? bv.localeCompare(av, 'ko') : av.localeCompare(bv, 'ko');
+      return sortDir === 'desc' ? bv - av : av - bv;
+    };
+    rowsArr.sort(cmp);
+    const tableRows = rowsArr.map(o => {
+      const vY = pctBadge(o.volumeYoyPct), mY = pctBadge(o.valueYoyPct), pY = pctBadge(o.priceYoyPct);
+      return {
+        country: o.country, major: o.major, minor: o.minor,
+        volumeDisplay: this.fmtVolumeML(o.volume), volumeYoyText: vY.text, volumeYoyColor: vY.color,
+        valueDisplay: this.fmtMoney(o.value, currency), valueYoyText: mY.text, valueYoyColor: mY.color,
+        priceDisplay: this.fmtUnitPrice(o.price, currency).replace('/kg', '/L'), priceYoyText: pY.text, priceYoyColor: pY.color,
+      };
+    });
+    const sortIcons = ['country', 'major', 'minor', 'volume', 'value', 'price'].reduce((acc, k) => { acc[k] = sortKey === k ? (sortDir === 'desc' ? '▼' : '▲') : ''; return acc; }, {});
+    const metricOptsBase = [{ id: 'value', label: '금액' }, { id: 'volume', label: '중량' }];
+    const currencyOptsBase = [{ id: 'USD', label: 'USD' }, { id: 'KRW', label: 'KRW' }];
+    const monthOptsBase = [{ id: 'all', label: '전체' }, ...Array.from({ length: 12 }, (_, i) => i + 1).map(m => ({ id: String(m), label: m + '월' }))];
+
+    return {
+      dataSourceLabel, windowLabel, kpis, trendValueLine, trendVolumeLine, trendValueLabels, trendVolumeLabels, trendXLabels, trendYearSummary, trendAxisY, currency, moneyUnitLabel, rankingBars, majorRankingBars,
+      majorDonutStyle, majorLegend, donutTitle, donutHoverTitle, tableRows, sortIcons,
+      majorOptions: majorOptsBase.map(o => ({ ...o, style: this.segStyle(s.major === o.id), onClick: () => this.setState({ major: o.id, minor: null }) })),
+      minorOptions: minorOptsBase ? minorOptsBase.map(o => ({ ...o, style: this.segStyle((s.minor || 'all') === o.id), onClick: () => this.setState({ minor: o.id === 'all' ? null : o.id }) })) : false,
+      totalBasisOptions: [{ id: 'yearly', label: '연도별' }, { id: 'ytd', label: 'YTD' }, { id: 'rolling', label: '최근 1년' }].map(o => ({ ...o, style: this.segStyle(s.totalBasis === o.id), onClick: () => this.setState({ totalBasis: o.id }) })),
+      yearFilterOptions: yearsAll.map(y => ({ id: String(y), label: y + '년', style: this.segStyle((s.selectedYears || []).includes(String(y))), onClick: () => this.toggleYear(String(y)) })),
+      monthOptions: monthOptsBase.map(o => ({ ...o, style: this.segStyle(o.id === 'all' ? !(s.selectedMonths || []).length : (s.selectedMonths || []).includes(o.id)), onClick: () => this.toggleMonth(o.id) })),
+      metricOptions: metricOptsBase.map(o => ({ ...o, style: this.segStyle(s.metric === o.id), onClick: () => this.setState({ metric: o.id }) })),
+      currencyOptions: currencyOptsBase.map(o => ({ ...o, style: this.segStyle(s.currency === o.id), onClick: () => this.setState({ currency: o.id }) })),
+      showFxInput: s.currency === 'KRW',
+      exchangeRate: s.exchangeRate,
+      onExchangeRateChange: (e) => this.setState({ exchangeRate: Number(e.target.value) || 0 }),
+      onForceUpdate: () => this.triggerForceUpdate(),
+      forceUpdateLabel: s.isUpdating ? '갱신 중…' : '강제 업데이트',
+      updateMessage: s.updateMessage,
+      activeCountryChip: s.country ? { name: COUNTRIES.find(c => c.id === s.country).name, onClear: () => this.setState({ country: null }) } : false,
+      selectedCountryValue: s.country || 'all',
+      countryFilterOptions: [{ id: 'all', name: '전체 국가' }, ...COUNTRIES.map(c => ({ id: c.id, name: c.name }))],
+      onCountryChange: (e) => this.setState({ country: e.target.value === 'all' ? null : e.target.value }),
+      selectedTableMinorValue: s.tableMinor || 'all',
+      tableMinorOptions,
+      onTableMinorChange: (e) => this.setState({ tableMinor: e.target.value === 'all' ? null : e.target.value }),
+      showAllLabel: s.showAll ? '상위 10개국만' : '전체 국가 보기',
+      toggleShowAll: () => this.setState(st => ({ showAll: !st.showAll })),
+      sortCountry: () => this.setSort('country'), sortMajor: () => this.setSort('major'), sortMinor: () => this.setSort('minor'), sortVolume: () => this.setSort('volume'),
+      sortValue: () => this.setSort('value'), sortPrice: () => this.setSort('price'),
+    };
+  }
+}
+
+</script>
+</body>
+</html>
