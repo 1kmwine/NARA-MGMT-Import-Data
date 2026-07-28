@@ -8,3 +8,6 @@ backend/static_legacy_wine_only/
 data/
 PPT/
 index/
+frontend/node_modules/
+frontend/.next/
+frontend/.env*.local
