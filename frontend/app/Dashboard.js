@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { sumField, pctDiff, deltaMeta, pctBadge, trendDelta, fmtMoney, fmtVolumeML, fmtUnitPrice, segStyle } from './lib/format';
+import { Button } from './components/Button';
 
 const YEARS_ALL = [2022, 2023, 2024, 2025, 2026];
 
@@ -346,9 +347,9 @@ export default function Dashboard({ rows, monthsList, COUNTRIES, MAJORS, apiBase
       <div className="nav" style={{ padding: '14px 32px' }}>
         <div className="nav-brand">국내 수입 주류 대시보드 · 전체</div>
         <span className="tag tag-outline" style={{ marginLeft: 14 }}>{v.dataSourceLabel}</span>
-        <button type="button" className="btn btn-ghost" style={{ fontSize: 12, marginRight: 'auto' }} onClick={triggerForceUpdate}>
+        <Button variant="ghost" size="sm" style={{ marginRight: 'auto' }} onClick={triggerForceUpdate} disabled={isUpdating}>
           {isUpdating ? '갱신 중…' : '강제 업데이트'}
-        </button>
+        </Button>
         {updateMessage && <span className="text-muted" style={{ fontSize: 11 }}>{updateMessage}</span>}
         <div className="seg">
           {['USD', 'KRW'].map(id => (
@@ -445,7 +446,7 @@ export default function Dashboard({ rows, monthsList, COUNTRIES, MAJORS, apiBase
                     <button key={opt.id} type="button" className="seg-opt" style={{ border: 'none', ...segStyle(metric === opt.id) }} onClick={() => setMetric(opt.id)}>{opt.label}</button>
                   ))}
                 </div>
-                <button type="button" className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => setShowAll(x => !x)}>{showAll ? '상위 10개국만' : '전체 국가 보기'}</button>
+                <Button variant="ghost" size="sm" onClick={() => setShowAll(x => !x)}>{showAll ? '상위 10개국만' : '전체 국가 보기'}</Button>
               </div>
             </div>
             <div className="text-muted" style={{ fontSize: 11, marginBottom: 14 }}>{v.windowLabel} · 클릭하여 필터링</div>

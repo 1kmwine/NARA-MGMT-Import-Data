@@ -1,0 +1,14 @@
+:root{
+--font-serif-display:"Lora",Georgia,serif;
+--font-sans-ui:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+--font-mono:"IBM Plex Mono",ui-monospace,monospace;
+--text-display-xl:600 56px/1.1 var(--font-serif-display);
+--text-display-lg:600 40px/1.15 var(--font-serif-display);
+--text-display-md:600 30px/1.25 var(--font-serif-display);
+--text-heading:700 22px/1.35 var(--font-sans-ui);
+--text-subheading:600 17px/1.4 var(--font-sans-ui);
+--text-body:400 16px/1.6 var(--font-sans-ui);
+--text-body-sm:400 14px/1.55 var(--font-sans-ui);
+--text-caption:500 12px/1.4 var(--font-sans-ui);
+--text-mono:400 14px/1.6 var(--font-mono);
+}
