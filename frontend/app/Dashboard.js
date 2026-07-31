@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { sumField, pctDiff, deltaMeta, trendDelta, fmtMoney, fmtVolumeML, fmtUnitPrice, segStyle } from './lib/format';
+import { sumField, pctDiff, deltaMeta, trendDelta, fmtMoney, fmtVolumeML, fmtUnitPrice, segStyle, shortMinorLabel, formatMonthRange } from './lib/format';
 import { Button } from './components/Button';
 import { PieChart } from './components/PieChart';
 import CountryReportCard from './CountryReportCard';
@@ -111,7 +111,7 @@ export default function Dashboard({ rows, monthsList, COUNTRIES, MAJORS, apiBase
         const curMPrice = curMQ ? curMV / curMQ : 0, prevMPrice = prevMQ ? prevMV / prevMQ : 0;
         const d = deltaMeta(pctDiff(curMPrice, prevMPrice));
         const priceDisplay = '$' + curMPrice.toFixed(1) + '/L';
-        return { name: mn.minor.replace(' 와인', ''), priceDisplay, yoyText: d.text, yoyColor: d.color };
+        return { name: shortMinorLabel(mn.minor, '와인'), priceDisplay, yoyText: d.text, yoyColor: d.color };
       });
     })() : null;
 
@@ -208,7 +208,7 @@ export default function Dashboard({ rows, monthsList, COUNTRIES, MAJORS, apiBase
     } else {
       const majorDef = MAJORS.find(m => m.major === s.major);
       const scoped = curRowsForDonut.filter(r => r.major === s.major);
-      pieData = majorDef.minors.map(mn => ({ label: mn.minor, value: sumField(scoped.filter(r => r.minor === mn.minor), 'value') }));
+      pieData = majorDef.minors.map(mn => ({ label: shortMinorLabel(mn.minor, s.major), value: sumField(scoped.filter(r => r.minor === mn.minor), 'value') }));
       donutTitle = s.major + ' · 중구분 비중';
     }
     pieData = pieData.filter(d => d.value > 0).sort((a, b) => b.value - a.value);

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { fmtM1, fmtSigned1, fmtSignedPct1, deltaColorSimple, segStyle } from './lib/format';
+import { fmtM1, fmtSigned1, fmtSignedPct1, deltaColorSimple, segStyle, shortMinorLabel } from './lib/format';
 import { Button } from './components/Button';
 
 const pctChange = (prev, cur) => (prev !== 0 ? (cur - prev) / Math.abs(prev) * 100 : 0);
@@ -201,7 +201,7 @@ export default function CountryReportCard({ curRows, prevRows, major, MAJORS, se
             </tr>
             <tr>
               {Array.from({ length: 4 }).flatMap((_, g) => cols.map((k, i) => (
-                <th key={g + '-' + i} style={k === 'total' ? { background: 'var(--color-neutral-200)' } : undefined}>{k === 'total' ? '합계' : k}</th>
+                <th key={g + '-' + i} style={k === 'total' ? { background: 'var(--color-neutral-200)' } : undefined}>{k === 'total' ? '합계' : shortMinorLabel(k, major)}</th>
               )))}
             </tr>
           </thead>
