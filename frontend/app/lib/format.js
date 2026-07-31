@@ -68,3 +68,31 @@ export function segStyle(active) {
     ? { background: 'color-mix(in srgb, var(--color-accent) 12%, transparent)', color: 'var(--color-accent-700)', boxShadow: 'inset 0 0 0 1px var(--color-accent)' }
     : { background: 'transparent', color: 'var(--color-text)' };
 }
+
+// 중구분 라벨에서 이미 상위 헤더에 나와있는 대구분 이름을 잘라낸다.
+// ("레드 와인" + 대구분 "와인" → "레드"). 접미 우선, 없으면 접두. 다 잘라내면
+// (중구분 이름이 대구분과 완전히 같은 경우, 예: 대구분/중구분 모두 "맥주")
+// 빈 문자열이 아니라 원본을 돌려준다.
+export function shortMinorLabel(minor, major) {
+  if (!major || major === 'all' || !minor) return minor;
+  let s = minor;
+  if (s.endsWith(major)) s = s.slice(0, s.length - major.length).trim();
+  else if (s.startsWith(major)) s = s.slice(major.length).trim();
+  return s || minor;
+}
+
+// 선택된 월 목록을 연속 구간으로 묶어 "1~5월", 끊기면 "1~5월 7~9월"로 표시.
+export function formatMonthRange(monthsNum) {
+  if (!monthsNum || !monthsNum.length) return '';
+  const sorted = [...new Set(monthsNum)].sort((a, b) => a - b);
+  const ranges = [];
+  let start = sorted[0], prev = sorted[0];
+  for (let i = 1; i < sorted.length; i++) {
+    const m = sorted[i];
+    if (m === prev + 1) { prev = m; continue; }
+    ranges.push([start, prev]);
+    start = prev = m;
+  }
+  ranges.push([start, prev]);
+  return ranges.map(([a, b]) => (a === b ? a + '월' : a + '~' + b + '월')).join(' ');
+}
