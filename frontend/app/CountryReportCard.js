@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { fmtM1, fmtSigned1, fmtSignedPct1, deltaColorSimple, segStyle, shortMinorLabel } from './lib/format';
+import { fmtM1, fmtSigned1, fmtSignedPct1, deltaColorSimple, segStyle, shortMinorLabel, formatMonthRange } from './lib/format';
 import { Button } from './components/Button';
 
 const pctChange = (prev, cur) => (prev !== 0 ? (cur - prev) / Math.abs(prev) * 100 : 0);
@@ -45,7 +45,7 @@ export default function CountryReportCard({ curRows, prevRows, major, MAJORS, se
   const isLatestYear = topYear === latestYear;
   const prevYear = topYear - 1;
   const months = selMonths || [];
-  const periodSuffix = months.length ? months.map(m => m + '월').join(',') : (isLatestYear ? 'M' + String(kpiMaxM).padStart(2, '0') + ' YTD' : '연간');
+  const periodSuffix = months.length ? formatMonthRange(months) : (isLatestYear ? 'M' + String(kpiMaxM).padStart(2, '0') + ' YTD' : '연간');
   const periodLabelWide = (y) => 'Y' + String(y).slice(-2) + ' ' + periodSuffix;
 
   const groupField = major === 'all' ? 'major' : 'minor';
@@ -161,7 +161,7 @@ export default function CountryReportCard({ curRows, prevRows, major, MAJORS, se
   return (
     <div className="card elev-sm" style={{ padding: 24, marginTop: 16 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-        <h2 style={{ margin: 0, fontSize: 19 }}>국내 {major === 'all' ? '전체 주류' : major} 수입_국가별 수입금액</h2>
+        <h2 style={{ margin: 0, fontSize: 19 }}>{major === 'all' ? '전체 주류' : major}_국가별 수입금액</h2>
         <div className="seg">
           {METRIC_OPTS.map(opt => (
             <button key={opt.id} type="button" className="seg-opt" style={{ border: 'none', ...segStyle(metric === opt.id) }} onClick={() => setMetric(opt.id)}>{opt.label}</button>

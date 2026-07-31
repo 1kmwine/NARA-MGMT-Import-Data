@@ -52,7 +52,7 @@ export default function Dashboard({ rows, monthsList, COUNTRIES, MAJORS, apiBase
     const keysOf = list => new Set(list.map(m => m.key));
     const selYearsNum = (s.selectedYears || []).map(Number).sort((a, b) => a - b);
     const selMonthsNum = (s.selectedMonths || []).map(Number);
-    const monthSuffix = selMonthsNum.length ? (' · ' + selMonthsNum.map(m => m + '월').join(',')) : '';
+    const monthSuffix = selMonthsNum.length ? (' · ' + formatMonthRange(selMonthsNum)) : '';
 
     const topYear = selYearsNum.length ? Math.max(...selYearsNum) : monthsList[monthsList.length - 1].year;
     const windowLabel = topYear + '년' + monthSuffix;
