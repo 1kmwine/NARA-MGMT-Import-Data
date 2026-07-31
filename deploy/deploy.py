@@ -41,12 +41,20 @@ def main():
     print("Uploading docker-compose.yml...")
     ssh.put(str(REPO_ROOT / "docker-compose.yml"), REMOTE_DIR + "/docker-compose.yml")
 
+    # put_dir only PUTs — it never deletes remote files that no longer exist
+    # locally, so a plain re-upload leaves deleted source files (and stale
+    # routes/pages) behind for `docker compose build` to pick back up. Wipe
+    # the source tree first; the backend's actual data cache lives in a
+    # named Docker volume (see docker-compose.yml), not this bind-mounted
+    # path, so this is safe.
     print("Uploading backend/...")
+    ssh.run(f"rm -rf {REMOTE_DIR}/backend")
     ssh.put_dir(str(REPO_ROOT / "backend"), REMOTE_DIR + "/backend",
                 exclude={".cache", "__pycache__", "static_legacy_wine_only", "static"})
     ssh.put(str(REPO_ROOT / "backend" / ".env"), REMOTE_DIR + "/backend/.env")
 
     print("Uploading frontend/...")
+    ssh.run(f"rm -rf {REMOTE_DIR}/frontend")
     ssh.put_dir(str(REPO_ROOT / "frontend"), REMOTE_DIR + "/frontend",
                 exclude={"node_modules", ".next", ".env.local"})
     ssh.put(str(REPO_ROOT / "frontend" / ".env"), REMOTE_DIR + "/frontend/.env")
