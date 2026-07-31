@@ -221,9 +221,9 @@ export default function Dashboard({ rows, monthsList, COUNTRIES, MAJORS, apiBase
       dataSourceLabel, windowLabel, kpis, trendValueLine, trendVolumeLine, trendValueLabels, trendVolumeLabels, trendXLabels, trendYearSummary, trendAxisY: axisY,
       rankingBars, pieData, donutTitle,
       majorOptsBase, minorOptsBase,
-      topYear, kpiMaxM, latestYear: latestPeriod.year,
-      wineCurRows: kpiCurRowsAll.filter(r => r.major === '와인'),
-      winePrevRows: kpiPrevRowsAll.filter(r => r.major === '와인'),
+      topYear, kpiMaxM, latestYear: latestPeriod.year, selMonthsNum,
+      reportCurRows: kpiCurRowsAll.filter(r => s.major === 'all' || r.major === s.major),
+      reportPrevRows: kpiPrevRowsAll.filter(r => s.major === 'all' || r.major === s.major),
     };
   }, [rows, monthsList, COUNTRIES, MAJORS, major, minor, selectedYears, selectedMonths, metric, country, showAll]);
 
@@ -345,8 +345,11 @@ export default function Dashboard({ rows, monthsList, COUNTRIES, MAJORS, apiBase
         </div>
 
         <CountryReportCard
-          wineCurRows={v.wineCurRows}
-          winePrevRows={v.winePrevRows}
+          curRows={v.reportCurRows}
+          prevRows={v.reportPrevRows}
+          major={major}
+          MAJORS={MAJORS}
+          selMonths={v.selMonthsNum}
           topYear={v.topYear}
           kpiMaxM={v.kpiMaxM}
           latestYear={v.latestYear}

@@ -11,10 +11,14 @@ const METRIC_OPTS = [
   { id: 'volume', label: '중량' },
   { id: 'price', label: '평균단가' },
 ];
-const SUBHEADERS = Array.from({ length: 4 }).flatMap(() => [
-  { label: '레드' }, { label: '화이트' }, { label: '스파클링' }, { label: '합계', total: true },
-]);
-const COLOR_KEY = (minor) => (minor === '레드 와인' ? 'red' : minor === '화이트 와인' ? 'white' : minor === '스파클링 와인' ? 'spark' : null);
+
+// 주종(대구분)이 '전체'면 대구분끼리, 특정 주종이면 그 주종의 중구분끼리 비교한다.
+function subItemsFor(major, MAJORS) {
+  if (!MAJORS) return [];
+  if (major === 'all') return MAJORS.map(m => m.major);
+  const def = MAJORS.find(m => m.major === major);
+  return def ? def.minors.map(mn => mn.minor) : [];
+}
 
 function unitLabel(metric) {
   if (metric === 'value') return '백만 달러';
@@ -31,7 +35,7 @@ function metricValue(o, period, metric) {
   return q ? v / q : 0;
 }
 
-export default function CountryReportCard({ wineCurRows, winePrevRows, topYear, kpiMaxM, latestYear }) {
+export default function CountryReportCard({ curRows, prevRows, major, MAJORS, selMonths, topYear, kpiMaxM, latestYear }) {
   const [metric, setMetric] = useState('value');
   const [comment, setComment] = useState('');
   const [bullets, setBullets] = useState(null);
@@ -40,30 +44,41 @@ export default function CountryReportCard({ wineCurRows, winePrevRows, topYear, 
 
   const isLatestYear = topYear === latestYear;
   const prevYear = topYear - 1;
-  const periodLabelWide = (y) => (isLatestYear ? 'Y' + String(y).slice(-2) + 'M' + String(kpiMaxM).padStart(2, '0') + ' YTD' : 'Y' + String(y).slice(-2) + ' 연간');
+  const months = selMonths || [];
+  const periodSuffix = months.length ? months.map(m => m + '월').join(',') : (isLatestYear ? 'M' + String(kpiMaxM).padStart(2, '0') + ' YTD' : '연간');
+  const periodLabelWide = (y) => 'Y' + String(y).slice(-2) + ' ' + periodSuffix;
+
+  const groupField = major === 'all' ? 'major' : 'minor';
+  const subItems = useMemo(() => subItemsFor(major, MAJORS), [major, MAJORS]);
+  const cols = [...subItems, 'total'];
 
   const report = useMemo(() => {
     const empty = () => ({ v25: 0, v26: 0, q25: 0, q26: 0 });
     const byCountry = new Map();
     const ensure = (country) => {
-      if (!byCountry.has(country)) byCountry.set(country, { country, red: empty(), white: empty(), spark: empty(), total: empty() });
+      if (!byCountry.has(country)) {
+        const c = { country, total: empty() };
+        subItems.forEach(k => { c[k] = empty(); });
+        byCountry.set(country, c);
+      }
       return byCountry.get(country);
     };
-    winePrevRows.forEach(r => {
+    prevRows.forEach(r => {
       const c = ensure(r.country);
       c.total.v25 += r.value; c.total.q25 += r.volume;
-      const k = COLOR_KEY(r.minor); if (k) { c[k].v25 += r.value; c[k].q25 += r.volume; }
+      const k = r[groupField]; if (c[k]) { c[k].v25 += r.value; c[k].q25 += r.volume; }
     });
-    wineCurRows.forEach(r => {
+    curRows.forEach(r => {
       const c = ensure(r.country);
       c.total.v26 += r.value; c.total.q26 += r.volume;
-      const k = COLOR_KEY(r.minor); if (k) { c[k].v26 += r.value; c[k].q26 += r.volume; }
+      const k = r[groupField]; if (c[k]) { c[k].v26 += r.value; c[k].q26 += r.volume; }
     });
     const countryAgg = [...byCountry.values()];
 
     const sumAgg = (label, list) => {
-      const acc = { country: label, red: empty(), white: empty(), spark: empty(), total: empty() };
-      list.forEach(c => ['red', 'white', 'spark', 'total'].forEach(k => {
+      const acc = { country: label, total: empty() };
+      subItems.forEach(k => { acc[k] = empty(); });
+      list.forEach(c => cols.forEach(k => {
         acc[k].v25 += c[k].v25; acc[k].v26 += c[k].v26; acc[k].q25 += c[k].q25; acc[k].q26 += c[k].q26;
       }));
       return acc;
@@ -74,14 +89,14 @@ export default function CountryReportCard({ wineCurRows, winePrevRows, topYear, 
     const allTotal = sumAgg('합계', countryAgg);
 
     const buildRow = (c, bold) => {
-      const cols = ['red', 'white', 'spark', 'total'];
       const vals25 = cols.map(k => metricValue(c[k], '25', metric));
       const vals26 = cols.map(k => metricValue(c[k], '26', metric));
       const gaps = vals26.map((v, i) => v - vals25[i]);
       const grw = vals26.map((v, i) => pctChange(vals25[i], v));
+      const lastIdx = cols.length - 1;
       const cellsFor = (arr, fmtFn, colorFn) => arr.map((v, i) => ({
         text: fmtFn(v),
-        style: { textAlign: 'right', padding: '6px 10px', ...(i === 3 ? { fontWeight: 700, background: 'var(--color-neutral-100)' } : {}), ...(colorFn ? { color: colorFn(v) } : {}) },
+        style: { textAlign: 'right', padding: '6px 10px', ...(i === lastIdx ? { fontWeight: 700, background: 'var(--color-neutral-100)' } : {}), ...(colorFn ? { color: colorFn(v) } : {}) },
       }));
       return {
         label: c.country, bold,
@@ -100,7 +115,7 @@ export default function CountryReportCard({ wineCurRows, winePrevRows, topYear, 
     const stats = {
       지표: METRIC_OPTS.find(o => o.id === metric).label,
       단위: unitLabel(metric),
-      비교대상: (isLatestYear ? ('1~' + kpiMaxM + '월 YTD') : '연간(1~12월)') + ', ' + prevYear + '년 vs ' + topYear + '년',
+      비교대상: periodSuffix + ', ' + prevYear + '년 vs ' + topYear + '년',
       전체_YoY_Gap: Number(gapOf(allTotal).toFixed(2)),
       전체_GRW: Number(growthOf(allTotal).toFixed(1)),
       성장상위국: topGrowth,
@@ -108,7 +123,7 @@ export default function CountryReportCard({ wineCurRows, winePrevRows, topYear, 
     };
 
     return { tableRows, stats };
-  }, [wineCurRows, winePrevRows, metric, isLatestYear, kpiMaxM, topYear, prevYear]);
+  }, [curRows, prevRows, metric, subItems, groupField, periodSuffix, topYear, prevYear]);
 
   const statsKey = JSON.stringify(report.stats);
 
@@ -146,7 +161,7 @@ export default function CountryReportCard({ wineCurRows, winePrevRows, topYear, 
   return (
     <div className="card elev-sm" style={{ padding: 24, marginTop: 16 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-        <h2 style={{ margin: 0, fontSize: 19 }}>국내 와인 수입_국가별 수입금액</h2>
+        <h2 style={{ margin: 0, fontSize: 19 }}>국내 {major === 'all' ? '전체 주류' : major} 수입_국가별 수입금액</h2>
         <div className="seg">
           {METRIC_OPTS.map(opt => (
             <button key={opt.id} type="button" className="seg-opt" style={{ border: 'none', ...segStyle(metric === opt.id) }} onClick={() => setMetric(opt.id)}>{opt.label}</button>
@@ -179,15 +194,15 @@ export default function CountryReportCard({ wineCurRows, winePrevRows, topYear, 
           <thead>
             <tr>
               <th rowSpan={2} style={{ textAlign: 'left' }}>구분</th>
-              <th colSpan={4}>{periodLabelWide(prevYear)}</th>
-              <th colSpan={4}>{periodLabelWide(topYear)}</th>
-              <th colSpan={4}>YoY Gap</th>
-              <th colSpan={4}>GRW%</th>
+              <th colSpan={cols.length}>{periodLabelWide(prevYear)}</th>
+              <th colSpan={cols.length}>{periodLabelWide(topYear)}</th>
+              <th colSpan={cols.length}>YoY Gap</th>
+              <th colSpan={cols.length}>GRW%</th>
             </tr>
             <tr>
-              {SUBHEADERS.map((h, i) => (
-                <th key={i} style={h.total ? { background: 'var(--color-neutral-200)' } : undefined}>{h.label}</th>
-              ))}
+              {Array.from({ length: 4 }).flatMap((_, g) => cols.map((k, i) => (
+                <th key={g + '-' + i} style={k === 'total' ? { background: 'var(--color-neutral-200)' } : undefined}>{k === 'total' ? '합계' : k}</th>
+              )))}
             </tr>
           </thead>
           <tbody>
