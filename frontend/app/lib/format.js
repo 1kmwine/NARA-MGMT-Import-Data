@@ -32,11 +32,7 @@ export function trendDelta(pctVal) {
   return { text: 'YoY ' + (positive ? '+' : '') + pctVal.toFixed(1) + '%', color: positive ? '#2563eb' : '#dc2626' };
 }
 
-export function fmtMoney(usd, currency, exchangeRate) {
-  if (currency === 'KRW') {
-    const eok = usd * exchangeRate / 1e8;
-    return eok.toLocaleString('ko-KR', { maximumFractionDigits: 1, minimumFractionDigits: 1 }) + '억원';
-  }
+export function fmtMoney(usd) {
   const m = usd / 1e6;
   return '$' + m.toLocaleString('en-US', { maximumFractionDigits: 1, minimumFractionDigits: 1 }) + 'M';
 }
@@ -46,9 +42,25 @@ export function fmtVolumeML(kg) {
   return ml.toLocaleString('ko-KR', { maximumFractionDigits: 1 }) + ' milL';
 }
 
-export function fmtUnitPrice(usdPerKg, currency, exchangeRate) {
-  if (currency === 'KRW') return '₩' + Math.round(usdPerKg * exchangeRate).toLocaleString('ko-KR') + '/kg';
+export function fmtUnitPrice(usdPerKg) {
   return '$' + usdPerKg.toFixed(2) + '/kg';
+}
+
+// Plain 1-decimal number formatters (used by report-style tables that show
+// raw magnitudes rather than "$"/"milL"-suffixed KPI values).
+export function fmtM1(v) {
+  return (v || 0).toLocaleString('ko-KR', { maximumFractionDigits: 1, minimumFractionDigits: 1 });
+}
+export function fmtSigned1(v) {
+  v = v || 0;
+  return (v >= 0 ? '+' : '') + v.toLocaleString('ko-KR', { maximumFractionDigits: 1, minimumFractionDigits: 1 });
+}
+export function fmtSignedPct1(v) {
+  if (!isFinite(v)) v = 0;
+  return (v >= 0 ? '+' : '') + v.toFixed(1) + '%';
+}
+export function deltaColorSimple(v) {
+  return v >= 0 ? '#2563eb' : '#dc2626';
 }
 
 export function segStyle(active) {
