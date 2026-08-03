@@ -1,6 +1,7 @@
 import React from "react";
 
-const palette = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)", "var(--chart-6)", "var(--chart-7)", "var(--chart-8)"];
+export const CHART_PALETTE = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)", "var(--chart-6)", "var(--chart-7)", "var(--chart-8)"];
+const palette = CHART_PALETTE;
 
 export function PieChart({ data = [], size = 220, donut = true }) {
   const total = data.reduce((s, d) => s + d.value, 0) || 1;

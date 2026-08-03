@@ -3,7 +3,8 @@
 import { useMemo, useState } from 'react';
 import { sumField, pctDiff, deltaMeta, trendDelta, fmtMoney, fmtVolumeML, fmtUnitPrice, segStyle, shortMinorLabel, formatMonthRange } from './lib/format';
 import { Button } from './components/Button';
-import { PieChart } from './components/PieChart';
+import { StackedBarChart } from './components/StackedBarChart';
+import { CHART_PALETTE } from './components/PieChart';
 import CountryReportCard from './CountryReportCard';
 
 const YEARS_ALL = [2026, 2025, 2024, 2023, 2022];
@@ -123,7 +124,7 @@ export default function Dashboard({ rows, monthsList, COUNTRIES, MAJORS, apiBase
     ];
 
     const yearsToShow = selYearsNum.length ? selYearsNum : [topYear - 1, topYear];
-    const filtered = rows.filter(matchesFilter);
+    const filtered = rows.filter(r => matchesFilter(r) && (!s.country || r.countryId === s.country));
     const monthsInScope = monthsList.filter(m => yearsToShow.includes(m.year));
     const n = monthsInScope.length;
     const marginLeft = 64, marginRight = 16, plotTop = 40, plotH = 175;
@@ -200,18 +201,27 @@ export default function Dashboard({ rows, monthsList, COUNTRIES, MAJORS, apiBase
       };
     });
 
-    const curRowsForDonut = kpiCurRowsAll.filter(r => !s.country || r.countryId === s.country);
-    let donutTitle, pieData;
-    if (s.major === 'all') {
-      pieData = MAJORS.map(m => ({ label: m.major, value: sumField(curRowsForDonut.filter(r => r.major === m.major), 'value') }));
-      donutTitle = '주종별(대구분) 비중';
-    } else {
-      const majorDef = MAJORS.find(m => m.major === s.major);
-      const scoped = curRowsForDonut.filter(r => r.major === s.major);
-      pieData = majorDef.minors.map(mn => ({ label: shortMinorLabel(mn.minor, s.major), value: sumField(scoped.filter(r => r.minor === mn.minor), 'value') }));
-      donutTitle = s.major + ' · 중구분 비중';
-    }
-    pieData = pieData.filter(d => d.value > 0).sort((a, b) => b.value - a.value);
+    // 중구분(또는 대구분) 구성을 연도별로 비교하는 스택드바 데이터.
+    // 국가/월 필터는 반영하되, 중구분 선택은 반영하지 않는다 — 이 차트 자체가
+    // 중구분 구성을 보여주는 게 목적이라 특정 중구분으로 좁히면 무의미해진다.
+    const compGroupField = s.major === 'all' ? 'major' : 'minor';
+    const compItemsRaw = s.major === 'all' ? MAJORS.map(m => m.major) : (MAJORS.find(m => m.major === s.major)?.minors.map(mn => mn.minor) || []);
+    const compBaseRows = rows.filter(r =>
+      (s.major === 'all' || r.major === s.major) &&
+      (!s.country || r.countryId === s.country) &&
+      (!selMonthsNum.length || selMonthsNum.includes(r.month))
+    );
+    const compTotals = new Map(compItemsRaw.map(item => [item, sumField(compBaseRows.filter(r => r[compGroupField] === item), 'value')]));
+    const compItemsOrdered = [...compItemsRaw].sort((a, b) => compTotals.get(b) - compTotals.get(a));
+    const compData = yearsToShow.map(y => {
+      const yearRows = compBaseRows.filter(r => r.year === y);
+      const segments = compItemsOrdered.map((item, i) => {
+        const val = sumField(yearRows.filter(r => r[compGroupField] === item), 'value');
+        return { label: s.major === 'all' ? item : shortMinorLabel(item, s.major), value: val, color: CHART_PALETTE[i % CHART_PALETTE.length], valueDisplay: fmtMoney(val) };
+      });
+      return { year: y, segments };
+    });
+    const compTitle = (s.major === 'all' ? '주종별(대구분)' : s.major + ' · 중구분') + ' 비중 (연도별 비교)';
 
     const majorOptsBase = [{ id: 'all', label: '전체' }, ...MAJORS.map(m => ({ id: m.major, label: m.major }))];
     const activeMajorDef = s.major !== 'all' ? MAJORS.find(m => m.major === s.major) : null;
@@ -219,7 +229,7 @@ export default function Dashboard({ rows, monthsList, COUNTRIES, MAJORS, apiBase
 
     return {
       dataSourceLabel, windowLabel, kpis, trendValueLine, trendVolumeLine, trendValueLabels, trendVolumeLabels, trendXLabels, trendYearSummary, trendAxisY: axisY,
-      rankingBars, pieData, donutTitle,
+      rankingBars, compData, compTitle,
       majorOptsBase, minorOptsBase,
       topYear, kpiMaxM, latestYear: latestPeriod.year, selMonthsNum,
       reportCurRows: kpiCurRowsAll.filter(r => s.major === 'all' || r.major === s.major),
@@ -234,10 +244,13 @@ export default function Dashboard({ rows, monthsList, COUNTRIES, MAJORS, apiBase
       <div className="nav" style={{ padding: '14px 32px' }}>
         <div className="nav-brand">국내 수입 주류 대시보드 · 전체</div>
         <span className="tag tag-outline" style={{ marginLeft: 14 }}>{v.dataSourceLabel}</span>
-        <Button variant="ghost" size="sm" style={{ marginRight: 'auto' }} onClick={triggerForceUpdate} disabled={isUpdating}>
-          {isUpdating ? '갱신 중…' : '강제 업데이트'}
-        </Button>
+        <div style={{ flex: 1 }} />
         {updateMessage && <span className="text-muted" style={{ fontSize: 11 }}>{updateMessage}</span>}
+        <div className="seg">
+          <button type="button" className="seg-opt" style={{ border: 'none', ...segStyle(false) }} onClick={triggerForceUpdate} disabled={isUpdating}>
+            {isUpdating ? '갱신 중…' : '강제 업데이트'}
+          </button>
+        </div>
       </div>
 
       <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 32px' }}>
@@ -336,11 +349,9 @@ export default function Dashboard({ rows, monthsList, COUNTRIES, MAJORS, apiBase
           </div>
 
           <div className="card elev-sm" style={{ padding: 24 }}>
-            <h3 style={{ margin: '0 0 4px' }}>{v.donutTitle}</h3>
-            <div className="text-muted" style={{ fontSize: 11, marginBottom: 14 }}>{v.windowLabel} · 금액 기준</div>
-            <div style={{ display: 'flex', justifyContent: 'center' }}>
-              <PieChart data={v.pieData} size={220} />
-            </div>
+            <h3 style={{ margin: '0 0 4px' }}>{v.compTitle}</h3>
+            <div className="text-muted" style={{ fontSize: 11, marginBottom: 14 }}>금액 기준</div>
+            <StackedBarChart data={v.compData} height={200} />
           </div>
         </div>
 

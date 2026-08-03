@@ -105,11 +105,13 @@ export default function CountryReportCard({ curRows, prevRows, major, MAJORS, se
     };
     const tableRows = [buildRow(allTotal, true), ...topN.map(c => buildRow(c, false)), buildRow(restAgg, false)];
 
+    // 인사이트는 표에 실제로 표기되는 국가(최종 선택 연도 상위 10개국, topN)로만 한정한다 —
+    // countryAgg 전체에서 뽑으면 표에 없는 국가가 인사이트에만 등장할 수 있다.
     const gapOf = c => metricValue(c.total, '26', metric) - metricValue(c.total, '25', metric);
     const growthOf = c => pctChange(metricValue(c.total, '25', metric), metricValue(c.total, '26', metric));
-    const topGrowth = [...countryAgg].sort((a, b) => gapOf(b) - gapOf(a)).slice(0, 5)
+    const topGrowth = [...topN].sort((a, b) => gapOf(b) - gapOf(a)).slice(0, 5)
       .map(c => ({ country: c.country, gap: Number(gapOf(c).toFixed(2)), growthPct: Number(growthOf(c).toFixed(1)) }));
-    const topDecline = [...countryAgg].sort((a, b) => gapOf(a) - gapOf(b)).slice(0, 5)
+    const topDecline = [...topN].sort((a, b) => gapOf(a) - gapOf(b)).slice(0, 5)
       .map(c => ({ country: c.country, gap: Number(gapOf(c).toFixed(2)), growthPct: Number(growthOf(c).toFixed(1)) }));
 
     const stats = {
