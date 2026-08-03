@@ -215,9 +215,11 @@ export default function Dashboard({ rows, monthsList, COUNTRIES, MAJORS, apiBase
     const compItemsOrdered = [...compItemsRaw].sort((a, b) => compTotals.get(b) - compTotals.get(a));
     const compData = yearsToShow.map(y => {
       const yearRows = compBaseRows.filter(r => r.year === y);
+      const yearTotal = sumField(yearRows, 'value');
       const segments = compItemsOrdered.map((item, i) => {
         const val = sumField(yearRows.filter(r => r[compGroupField] === item), 'value');
-        return { label: s.major === 'all' ? item : shortMinorLabel(item, s.major), value: val, color: CHART_PALETTE[i % CHART_PALETTE.length], valueDisplay: fmtMoney(val) };
+        const pct = yearTotal ? Math.round(val / yearTotal * 100) : 0;
+        return { label: s.major === 'all' ? item : shortMinorLabel(item, s.major), value: val, color: CHART_PALETTE[i % CHART_PALETTE.length], valueDisplay: pct + '%' };
       });
       return { year: y, segments };
     });
@@ -351,7 +353,7 @@ export default function Dashboard({ rows, monthsList, COUNTRIES, MAJORS, apiBase
           <div className="card elev-sm" style={{ padding: 24 }}>
             <h3 style={{ margin: '0 0 4px' }}>{v.compTitle}</h3>
             <div className="text-muted" style={{ fontSize: 11, marginBottom: 14 }}>금액 기준</div>
-            <StackedBarChart data={v.compData} height={200} />
+            <StackedBarChart data={v.compData} height={200} normalize />
           </div>
         </div>
 

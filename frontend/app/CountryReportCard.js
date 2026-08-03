@@ -41,6 +41,10 @@ export default function CountryReportCard({ curRows, prevRows, major, MAJORS, se
   const [bullets, setBullets] = useState(null);
   const [bulletsError, setBulletsError] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [focusCountries, setFocusCountries] = useState([]);
+  const [focusItems, setFocusItems] = useState([]);
+  const toggleFocusCountry = (name) => setFocusCountries(cur => cur.includes(name) ? cur.filter(x => x !== name) : [...cur, name]);
+  const toggleFocusItem = (key) => setFocusItems(cur => cur.includes(key) ? cur.filter(x => x !== key) : [...cur, key]);
 
   const isLatestYear = topYear === latestYear;
   const prevYear = topYear - 1;
@@ -88,7 +92,7 @@ export default function CountryReportCard({ curRows, prevRows, major, MAJORS, se
     const restAgg = sumAgg('기타', sorted.slice(10));
     const allTotal = sumAgg('합계', countryAgg);
 
-    const buildRow = (c, bold) => {
+    const buildRow = (c, bold, clickable) => {
       const vals25 = cols.map(k => metricValue(c[k], '25', metric));
       const vals26 = cols.map(k => metricValue(c[k], '26', metric));
       const gaps = vals26.map((v, i) => v - vals25[i]);
@@ -96,14 +100,15 @@ export default function CountryReportCard({ curRows, prevRows, major, MAJORS, se
       const lastIdx = cols.length - 1;
       const cellsFor = (arr, fmtFn, colorFn) => arr.map((v, i) => ({
         text: fmtFn(v),
+        itemKey: cols[i],
         style: { textAlign: 'right', padding: '6px 10px', ...(i === lastIdx ? { fontWeight: 700, background: 'var(--color-neutral-100)' } : {}), ...(colorFn ? { color: colorFn(v) } : {}) },
       }));
       return {
-        label: c.country, bold,
+        label: c.country, bold, clickable,
         cells: [...cellsFor(vals25, fmtM1), ...cellsFor(vals26, fmtM1), ...cellsFor(gaps, fmtSigned1, deltaColorSimple), ...cellsFor(grw, fmtSignedPct1, deltaColorSimple)],
       };
     };
-    const tableRows = [buildRow(allTotal, true), ...topN.map(c => buildRow(c, false)), buildRow(restAgg, false)];
+    const tableRows = [buildRow(allTotal, true, false), ...topN.map(c => buildRow(c, false, true)), buildRow(restAgg, false, false)];
 
     // 인사이트는 표에 실제로 표기되는 국가(최종 선택 연도 상위 10개국, topN)로만 한정한다 —
     // countryAgg 전체에서 뽑으면 표에 없는 국가가 인사이트에만 등장할 수 있다.
@@ -114,6 +119,62 @@ export default function CountryReportCard({ curRows, prevRows, major, MAJORS, se
     const topDecline = [...topN].sort((a, b) => gapOf(a) - gapOf(b)).slice(0, 5)
       .map(c => ({ country: c.country, gap: Number(gapOf(c).toFixed(2)), growthPct: Number(growthOf(c).toFixed(1)) }));
 
+    // 국가/항목(컬러)/표 데이터(둘 다) 클릭 시 그 범위에 대한 수치만 별도로 얹는다 —
+    // 인사이트 프롬프트가 "stats에 있는 값만 사용" 규칙을 지키면서 그 범위 얘기만
+    // 하도록. 국가·항목 각각 복수 선택 가능 — 선택 조합에 따라 세 가지 모양 중
+    // 하나가 만들어진다.
+    const round2 = v => Number(v.toFixed(2));
+    const round1 = v => Number(v.toFixed(1));
+    const itemGapOf = (c, k) => metricValue(c[k], '26', metric) - metricValue(c[k], '25', metric);
+    const itemGrowthOf = (c, k) => pctChange(metricValue(c[k], '25', metric), metricValue(c[k], '26', metric));
+    const focusEntries = focusCountries.map(name => topN.find(c => c.country === name)).filter(Boolean);
+
+    let focusStats = null;
+    if (focusEntries.length && focusItems.length) {
+      const cells = [];
+      focusEntries.forEach(entry => focusItems.forEach(it => {
+        cells.push({
+          국가: entry.country, 항목: shortMinorLabel(it, major),
+          전년값: round2(metricValue(entry[it], '25', metric)),
+          금년값: round2(metricValue(entry[it], '26', metric)),
+          YoY_Gap: round2(itemGapOf(entry, it)),
+          GRW: round1(itemGrowthOf(entry, it)),
+        });
+      }));
+      focusStats = { 범위: '국가×항목 조합 (표에서 고른 셀들)', 선택: cells };
+    } else if (focusEntries.length) {
+      const rows = focusEntries.map(entry => ({
+        국가: entry.country,
+        전년값: round2(metricValue(entry.total, '25', metric)),
+        금년값: round2(metricValue(entry.total, '26', metric)),
+        YoY_Gap: round2(gapOf(entry)),
+        GRW: round1(growthOf(entry)),
+        ...(focusEntries.length === 1 ? {
+          세부구성: subItems.map(k => ({
+            항목: shortMinorLabel(k, major),
+            금년값: round2(metricValue(entry[k], '26', metric)),
+            GRW: round1(itemGrowthOf(entry, k)),
+          })),
+        } : {}),
+      }));
+      focusStats = { 범위: focusEntries.length > 1 ? '국가 비교' : '국가', 국가별: rows };
+    } else if (focusItems.length) {
+      const rows = focusItems.map(it => {
+        const agg25 = topN.reduce((s, c) => s + metricValue(c[it], '25', metric), 0);
+        const agg26 = topN.reduce((s, c) => s + metricValue(c[it], '26', metric), 0);
+        const row = { 항목: shortMinorLabel(it, major), 전년값: round2(agg25), 금년값: round2(agg26), YoY_Gap: round2(agg26 - agg25) };
+        if (focusItems.length === 1) {
+          const movers = [...topN]
+            .map(c => ({ 국가: c.country, gap: round2(itemGapOf(c, it)), growthPct: round1(itemGrowthOf(c, it)) }))
+            .sort((a, b) => b.gap - a.gap);
+          row.국가별_변화_상위 = movers.slice(0, 5);
+          row.국가별_변화_하위 = movers.slice(-5).reverse();
+        }
+        return row;
+      });
+      focusStats = { 범위: focusItems.length > 1 ? '항목 비교' : '항목', 항목별: rows };
+    }
+
     const stats = {
       지표: METRIC_OPTS.find(o => o.id === metric).label,
       단위: unitLabel(metric),
@@ -122,19 +183,32 @@ export default function CountryReportCard({ curRows, prevRows, major, MAJORS, se
       전체_GRW: Number(growthOf(allTotal).toFixed(1)),
       성장상위국: topGrowth,
       감소상위국: topDecline,
+      ...(focusStats ? { 포커스: focusStats } : {}),
     };
 
     return { tableRows, stats };
-  }, [curRows, prevRows, metric, subItems, groupField, periodSuffix, topYear, prevYear]);
+  }, [curRows, prevRows, metric, subItems, groupField, periodSuffix, topYear, prevYear, major, focusCountries, focusItems]);
 
   const statsKey = JSON.stringify(report.stats);
 
+  // 클릭으로 국가/항목을 좁혔으면 그 범위만 다루라는 지시를 자동으로 붙인다 —
+  // 관점 입력창에 따로 타이핑한 지시가 있으면 그 뒤에 이어붙인다.
+  const focusInstruction = (() => {
+    const cs = focusCountries.length ? focusCountries.join(', ') : null;
+    const its = focusItems.length ? focusItems.map(k => shortMinorLabel(k, major)).join(', ') + ' 항목' : null;
+    if (!cs && !its) return null;
+    const scope = [cs, its].filter(Boolean).join(' / ');
+    const multi = focusCountries.length + focusItems.length > 1;
+    return scope + '만 다루고' + (multi ? ', 서로 비교해서 시사점을 뽑아줘' : '');
+  })();
+
   const fetchBullets = (force, instruction) => {
+    const combined = [focusInstruction, instruction].filter(Boolean).join(' / ') || undefined;
     setLoading(true);
     fetch('/api/insights', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ stats: report.stats, instruction: instruction || undefined, force: force || undefined }),
+      body: JSON.stringify({ stats: report.stats, instruction: combined, force: force || undefined }),
     })
       .then(r => r.json())
       .then(data => {
@@ -176,6 +250,19 @@ export default function CountryReportCard({ curRows, prevRows, major, MAJORS, se
         <div>➢ {bulletText('bullet2')}</div>
       </div>
 
+      {(focusCountries.length > 0 || focusItems.length > 0) && (
+        <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+          <span className="text-muted" style={{ fontSize: 11 }}>인사이트 범위:</span>
+          {focusCountries.map(name => (
+            <span key={name} className="tag tag-accent" style={{ cursor: 'pointer' }} onClick={() => toggleFocusCountry(name)}>{name} ✕</span>
+          ))}
+          {focusItems.map(key => (
+            <span key={key} className="tag tag-accent" style={{ cursor: 'pointer' }} onClick={() => toggleFocusItem(key)}>{shortMinorLabel(key, major)} ✕</span>
+          ))}
+          <span className="text-muted" style={{ fontSize: 11, cursor: 'pointer', textDecoration: 'underline' }} onClick={() => { setFocusCountries([]); setFocusItems([]); }}>전체 지우기</span>
+        </div>
+      )}
+
       <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
         <input
           className="input"
@@ -202,16 +289,47 @@ export default function CountryReportCard({ curRows, prevRows, major, MAJORS, se
               <th colSpan={cols.length}>GRW%</th>
             </tr>
             <tr>
-              {Array.from({ length: 4 }).flatMap((_, g) => cols.map((k, i) => (
-                <th key={g + '-' + i} style={k === 'total' ? { background: 'var(--color-neutral-200)' } : undefined}>{k === 'total' ? '합계' : shortMinorLabel(k, major)}</th>
-              )))}
+              {Array.from({ length: 4 }).flatMap((_, g) => cols.map((k, i) => {
+                const isItem = k !== 'total';
+                const active = isItem && focusItems.includes(k);
+                return (
+                  <th
+                    key={g + '-' + i}
+                    onClick={isItem ? () => toggleFocusItem(k) : undefined}
+                    style={{
+                      ...(k === 'total' ? { background: 'var(--color-neutral-200)' } : {}),
+                      ...(isItem ? { cursor: 'pointer' } : {}),
+                      ...(active ? { background: 'var(--color-accent-soft)', color: 'var(--color-accent-hover)' } : {}),
+                    }}
+                  >
+                    {k === 'total' ? '합계' : shortMinorLabel(k, major)}
+                  </th>
+                );
+              }))}
             </tr>
           </thead>
           <tbody>
             {report.tableRows.map((row, i) => (
-              <tr key={i} style={row.bold ? { background: 'var(--color-neutral-100)' } : {}}>
-                <td style={{ padding: '6px 10px', fontWeight: row.bold ? 700 : 400 }}>{row.label}</td>
-                {row.cells.map((c, j) => <td key={j} style={c.style}>{c.text}</td>)}
+              <tr key={i} style={row.bold ? { background: 'var(--color-neutral-100)' } : (row.clickable && focusCountries.includes(row.label) ? { background: 'var(--color-accent-soft)' } : {})}>
+                <td
+                  onClick={row.clickable ? () => toggleFocusCountry(row.label) : undefined}
+                  style={{ padding: '6px 10px', fontWeight: row.bold ? 700 : 400, ...(row.clickable ? { cursor: 'pointer' } : {}) }}
+                >
+                  {row.label}
+                </td>
+                {row.cells.map((c, j) => {
+                  const cellClickable = row.clickable && c.itemKey !== 'total';
+                  const active = row.clickable && focusCountries.includes(row.label) && focusItems.includes(c.itemKey);
+                  return (
+                    <td
+                      key={j}
+                      onClick={cellClickable ? () => { toggleFocusCountry(row.label); toggleFocusItem(c.itemKey); } : undefined}
+                      style={{ ...c.style, ...(cellClickable ? { cursor: 'pointer' } : {}), ...(active ? { boxShadow: 'inset 0 0 0 1.5px var(--color-accent)' } : {}) }}
+                    >
+                      {c.text}
+                    </td>
+                  );
+                })}
               </tr>
             ))}
           </tbody>

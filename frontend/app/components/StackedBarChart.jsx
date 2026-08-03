@@ -2,7 +2,7 @@ import React from "react";
 
 // data: [{ year, segments: [{ label, value, color, valueDisplay }] }]
 // Bar height scales to the tallest year's total; segment height scales to its share of that year's total.
-export function StackedBarChart({ data = [], height = 220, barWidth = 64 }) {
+export function StackedBarChart({ data = [], height = 220, barWidth = 64, normalize = false }) {
   const maxTotal = Math.max(1, ...data.map(d => d.segments.reduce((s, x) => s + x.value, 0)));
   const legendMap = new Map();
   data.forEach(d => d.segments.forEach(seg => { if (!legendMap.has(seg.label)) legendMap.set(seg.label, seg.color); }));
@@ -12,7 +12,7 @@ export function StackedBarChart({ data = [], height = 220, barWidth = 64 }) {
       <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "center", gap: 24, height, paddingTop: 24 }}>
         {data.map(d => {
           const total = d.segments.reduce((s, x) => s + x.value, 0);
-          const barH = total ? (total / maxTotal) * height : 0;
+          const barH = normalize ? height : (total ? (total / maxTotal) * height : 0);
           return (
             <div key={d.year} style={{ display: "flex", flexDirection: "column", alignItems: "center", width: barWidth }}>
               <div style={{ width: "100%", height: barH, display: "flex", flexDirection: "column-reverse", borderRadius: 4, overflow: "hidden" }}>
