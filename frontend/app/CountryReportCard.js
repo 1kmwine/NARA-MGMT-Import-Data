@@ -267,7 +267,7 @@ export default function CountryReportCard({ curRows, prevRows, major, MAJORS, se
         <input
           className="input"
           style={{ flex: 1, minWidth: 220, minHeight: 32, padding: '4px 8px', fontSize: 13 }}
-          placeholder="관점 입력"
+          placeholder="입력"
           value={comment}
           onChange={e => setComment(e.target.value)}
         />
