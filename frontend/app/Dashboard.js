@@ -19,6 +19,7 @@ export default function Dashboard({ rows, monthsList, COUNTRIES, MAJORS, apiBase
   const [showAll, setShowAll] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [updateMessage, setUpdateMessage] = useState(null);
+  const [majorMenuOpen, setMajorMenuOpen] = useState(false);
 
   const toggleYear = (id) => setSelectedYears(cur => cur.includes(id) ? cur.filter(y => y !== id) : [...cur, id].sort());
   const toggleMonth = (id) => {
@@ -225,14 +226,21 @@ export default function Dashboard({ rows, monthsList, COUNTRIES, MAJORS, apiBase
     });
     const compTitle = (s.major === 'all' ? '주종별(대구분)' : s.major + ' · 중구분') + ' 비중 (연도별 비교)';
 
-    const majorOptsBase = [{ id: 'all', label: '전체' }, ...MAJORS.map(m => ({ id: m.major, label: m.major }))];
+    // 와인을 맨 앞에 고정하고 나머지는 원래 순서(수입액 내림차순) 유지 — 상위 8개만
+    // 버튼으로 보여주고 나머지(와인(2L 이상)은 무조건 포함)는 '···' 드롭다운 뒤로 숨긴다.
+    const majorsWineFirst = [...MAJORS].sort((a, b) => (a.major === '와인' ? -1 : b.major === '와인' ? 1 : 0));
+    const PINNED_OVERFLOW = new Set(['와인(2L 이상)']);
+    const visibleMajors = majorsWineFirst.filter(m => !PINNED_OVERFLOW.has(m.major)).slice(0, 8);
+    const visibleIds = new Set(visibleMajors.map(m => m.major));
+    const majorOptsVisible = [{ id: 'all', label: '전체' }, ...visibleMajors.map(m => ({ id: m.major, label: m.major }))];
+    const majorOptsOverflow = majorsWineFirst.filter(m => !visibleIds.has(m.major)).map(m => ({ id: m.major, label: m.major }));
     const activeMajorDef = s.major !== 'all' ? MAJORS.find(m => m.major === s.major) : null;
     const minorOptsBase = activeMajorDef ? [{ id: 'all', label: '전체' }, ...activeMajorDef.minors.map(mn => ({ id: mn.minor, label: mn.minor }))] : null;
 
     return {
       dataSourceLabel, windowLabel, kpis, trendValueLine, trendVolumeLine, trendValueLabels, trendVolumeLabels, trendXLabels, trendYearSummary, trendAxisY: axisY,
       rankingBars, compData, compTitle,
-      majorOptsBase, minorOptsBase,
+      majorOptsVisible, majorOptsOverflow, minorOptsBase,
       topYear, kpiMaxM, latestYear: latestPeriod.year, selMonthsNum,
       reportCurRows: kpiCurRowsAll.filter(r => s.major === 'all' || r.major === s.major),
       reportPrevRows: kpiPrevRowsAll.filter(r => s.major === 'all' || r.major === s.major),
@@ -272,10 +280,37 @@ export default function Dashboard({ rows, monthsList, COUNTRIES, MAJORS, apiBase
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginTop: 10 }}>
           <span className="text-muted" style={{ fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', width: 82, flexShrink: 0 }}>주종(대구분)</span>
           <div className="seg" style={{ flexWrap: 'wrap' }}>
-            {v.majorOptsBase.map(opt => (
+            {v.majorOptsVisible.map(opt => (
               <button key={opt.id} type="button" className="seg-opt" style={{ border: 'none', ...segStyle(major === opt.id) }} onClick={() => { setMajor(opt.id); setMinor(null); }}>{opt.label}</button>
             ))}
           </div>
+          {v.majorOptsOverflow.length > 0 && (
+            <div style={{ position: 'relative' }}>
+              <div className="seg">
+                <button
+                  type="button" className="seg-opt" style={{ border: 'none', ...segStyle(v.majorOptsOverflow.some(o => o.id === major)) }}
+                  onClick={() => setMajorMenuOpen(o => !o)}
+                >
+                  {v.majorOptsOverflow.find(o => o.id === major)?.label ?? '···'}
+                </button>
+              </div>
+              {majorMenuOpen && (
+                <>
+                  <div style={{ position: 'fixed', inset: 0, zIndex: 19 }} onClick={() => setMajorMenuOpen(false)} />
+                  <div className="card elev-sm" style={{ position: 'absolute', top: '110%', left: 0, zIndex: 20, padding: 6, display: 'flex', flexDirection: 'column', gap: 2, minWidth: 130 }}>
+                    {v.majorOptsOverflow.map(opt => (
+                      <button
+                        key={opt.id} type="button" className="seg-opt" style={{ border: 'none', justifyContent: 'flex-start', ...segStyle(major === opt.id) }}
+                        onClick={() => { setMajor(opt.id); setMinor(null); setMajorMenuOpen(false); }}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
           {country && (
             <span className="tag tag-accent" style={{ cursor: 'pointer' }} onClick={() => setCountry(null)}>{COUNTRIES.find(c => c.id === country)?.name} ✕</span>
           )}
