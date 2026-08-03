@@ -388,7 +388,9 @@ export default function Dashboard({ rows, monthsList, COUNTRIES, MAJORS, apiBase
           <div className="card elev-sm" style={{ padding: 24 }}>
             <h3 style={{ margin: '0 0 4px' }}>{v.compTitle}</h3>
             <div className="text-muted" style={{ fontSize: 11, marginBottom: 14 }}>금액 기준</div>
-            <StackedBarChart data={v.compData} height={200} normalize />
+            <div style={{ flex: 1, minHeight: 0 }}>
+              <StackedBarChart data={v.compData} normalize />
+            </div>
           </div>
         </div>
 
