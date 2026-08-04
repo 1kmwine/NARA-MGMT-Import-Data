@@ -101,7 +101,7 @@ export default function CountryReportCard({ curRows, prevRows, major, MAJORS, se
       const cellsFor = (arr, fmtFn, colorFn) => arr.map((v, i) => ({
         text: fmtFn(v),
         itemKey: cols[i],
-        style: { textAlign: 'right', padding: '6px 10px', ...(i === lastIdx ? { fontWeight: 700, background: 'var(--color-neutral-100)' } : {}), ...(colorFn ? { color: colorFn(v) } : {}) },
+        style: { textAlign: 'right', padding: '4px 5px', ...(i === lastIdx ? { fontWeight: 700, background: 'var(--color-neutral-100)' } : {}), ...(colorFn ? { color: colorFn(v) } : {}) },
       }));
       return {
         label: c.country, bold, clickable,
@@ -313,7 +313,7 @@ export default function CountryReportCard({ curRows, prevRows, major, MAJORS, se
               <tr key={i} style={row.bold ? { background: 'var(--color-neutral-100)' } : (row.clickable && focusCountries.includes(row.label) ? { background: 'var(--color-accent-soft)' } : {})}>
                 <td
                   onClick={row.clickable ? () => toggleFocusCountry(row.label) : undefined}
-                  style={{ padding: '6px 10px', fontWeight: row.bold ? 700 : 400, ...(row.clickable ? { cursor: 'pointer' } : {}) }}
+                  style={{ padding: '4px 6px', fontWeight: row.bold ? 700 : 400, ...(row.clickable ? { cursor: 'pointer' } : {}) }}
                 >
                   {row.label}
                 </td>
