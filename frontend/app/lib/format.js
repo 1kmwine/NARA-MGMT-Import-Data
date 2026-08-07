@@ -16,14 +16,6 @@ export function deltaMeta(pctVal) {
   return { text: (positive ? '▲ ' : '▼ ') + Math.abs(pctVal).toFixed(1) + '%', color: positive ? 'var(--color-accent-700)' : 'var(--color-neutral-700)' };
 }
 
-// Table-badge variant: +blue/-red, no arrow glyph.
-export function pctBadge(pctVal) {
-  if (pctVal === null) return { text: '—', color: 'var(--color-text)' };
-  if (!isFinite(pctVal)) pctVal = 0;
-  const positive = pctVal >= 0;
-  return { text: (positive ? '+' : '') + pctVal.toFixed(1) + '%', color: positive ? '#2563eb' : '#dc2626' };
-}
-
 // Year-summary variant: "YoY +x%" text, +blue/-red.
 export function trendDelta(pctVal) {
   if (pctVal === null) return { text: '—', color: 'var(--color-text)' };

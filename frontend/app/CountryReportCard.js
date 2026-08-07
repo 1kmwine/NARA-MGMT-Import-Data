@@ -287,8 +287,9 @@ export default function CountryReportCard({ curRows, prevRows, major, MAJORS, se
           placeholder="입력"
           value={comment}
           onChange={e => setComment(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter' && !loading) fetchBullets(true, comment); }}
         />
-        <Button variant="secondary" size="sm" onClick={() => fetchBullets(true, comment)} disabled={loading}>{loading ? '생성 중…' : '새로고침'}</Button>
+        <Button variant="secondary" size="sm" onClick={() => fetchBullets(true, comment)} disabled={loading}>{loading ? '생성 중…' : '입력'}</Button>
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
