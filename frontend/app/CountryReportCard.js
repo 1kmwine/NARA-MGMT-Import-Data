@@ -127,6 +127,22 @@ export default function CountryReportCard({ curRows, prevRows, major, MAJORS, se
     const round1 = v => Number(v.toFixed(1));
     const itemGapOf = (c, k) => metricValue(c[k], '26', metric) - metricValue(c[k], '25', metric);
     const itemGrowthOf = (c, k) => pctChange(metricValue(c[k], '25', metric), metricValue(c[k], '26', metric));
+    // 항목별(화이트/레드 등) 요약은 클릭으로 포커스 안 잡아도 항상 stats에 넣는다 —
+    // 입력창에 "화이트/레드는 어떻게 흐르나" 식으로 자유 질문했을 때도 참조할 숫자가
+    // 있어야 모델이 답을 지어내지 않고 실제로 반영한다.
+    const itemSummary = subItems.length ? subItems.map(k => {
+      const agg25 = topN.reduce((s, c) => s + metricValue(c[k], '25', metric), 0);
+      const agg26 = topN.reduce((s, c) => s + metricValue(c[k], '26', metric), 0);
+      const movers = [...topN]
+        .map(c => ({ 국가: c.country, gap: round2(itemGapOf(c, k)), growthPct: round1(itemGrowthOf(c, k)) }))
+        .sort((a, b) => b.gap - a.gap);
+      return {
+        항목: shortMinorLabel(k, major), 전년값: round2(agg25), 금년값: round2(agg26),
+        YoY_Gap: round2(agg26 - agg25), GRW: round1(pctChange(agg25, agg26)),
+        핵심국가_상위3: movers.slice(0, 3),
+      };
+    }) : null;
+
     const focusEntries = focusCountries.map(name => topN.find(c => c.country === name)).filter(Boolean);
 
     let focusStats = null;
@@ -183,6 +199,7 @@ export default function CountryReportCard({ curRows, prevRows, major, MAJORS, se
       전체_GRW: Number(growthOf(allTotal).toFixed(1)),
       성장상위국: topGrowth,
       감소상위국: topDecline,
+      ...(itemSummary ? { 항목별_요약: itemSummary } : {}),
       ...(focusStats ? { 포커스: focusStats } : {}),
     };
 
