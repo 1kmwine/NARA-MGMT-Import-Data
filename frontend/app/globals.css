@@ -1,13 +1,21 @@
-@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+KR:wght@400;500;600;700&display=swap');
 @import './tokens/colors.css';
 @import './tokens/typography.css';
 @import './tokens/spacing.css';
 
+/* Self-hosted so it renders even on the internal server where clients may have
+   no outbound internet — no external @import to a font CDN. Pretendard covers
+   Hangul + Latin in one family, so headings/body/UI share one cohesive font. */
+@font-face {
+  font-family: "Pretendard";
+  src: url("/fonts/PretendardVariable.woff2") format("woff2-variations");
+  font-weight: 400 700;
+  font-display: swap;
+}
+
 :root {
-  /* Korean text needs Noto Sans KR — the design system's Lora/Inter/IBM Plex Mono don't cover Hangul */
-  --font-serif-display: "Lora", "Noto Sans KR", Georgia, serif;
-  --font-sans-ui: "Inter", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --font-mono: "IBM Plex Mono", "Noto Sans KR", ui-monospace, monospace;
+  --font-serif-display: "Pretendard", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-sans-ui: "Pretendard", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, "Pretendard", SFMono-Regular, Menlo, monospace;
 
   /* Back-compat aliases so existing markup/JS (--color-bg, --color-accent-NNN ramps, etc.)
      picks up the design system's palette without a full rewrite. */
@@ -98,6 +106,11 @@ a:hover { color: var(--color-accent-hover); }
 .table td { padding: var(--space-2); border-bottom: 1px solid var(--color-border); }
 .table tbody tr:hover { background: var(--color-bg-hover); }
 
-.rpt-table { width: 100%; border-collapse: collapse; font-size: 11px; font-family: var(--font-sans-ui); }
-.rpt-table th { border: 1px solid var(--color-border); padding: 4px 5px; background: var(--color-bg-soft); font-weight: 600; text-align: center; white-space: nowrap; }
-.rpt-table td { border: 1px solid var(--color-border); white-space: nowrap; }
+/* Legibility over cram: 12.5px + tabular figures, horizontal rules only (no
+   per-cell grid), zebra rows. The 21-col width scrolls inside its overflowX
+   wrapper instead of being shrunk to fit. */
+.rpt-table { width: 100%; border-collapse: collapse; font-size: 12.5px; font-family: var(--font-sans-ui); font-variant-numeric: tabular-nums; }
+.rpt-table th { padding: 6px 8px; background: var(--color-bg-soft); font-weight: 500; text-align: center; white-space: nowrap; border-bottom: 1.5px solid var(--color-border-strong); }
+.rpt-table td { white-space: nowrap; border-bottom: 1px solid var(--color-border); }
+.rpt-table tbody tr:not(:first-child):nth-child(even) { background: var(--color-neutral-100); }
+.rpt-table tbody tr:hover { background: var(--color-bg-hover); }

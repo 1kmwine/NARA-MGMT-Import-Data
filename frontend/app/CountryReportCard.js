@@ -98,10 +98,12 @@ export default function CountryReportCard({ curRows, prevRows, major, MAJORS, se
       const gaps = vals26.map((v, i) => v - vals25[i]);
       const grw = vals26.map((v, i) => pctChange(vals25[i], v));
       const lastIdx = cols.length - 1;
+      // i === 0 starts a new period group (Y25 / Y26 / Gap / GRW) — a subtle left
+      // divider separates the four blocks instead of a border on every cell.
       const cellsFor = (arr, fmtFn, colorFn) => arr.map((v, i) => ({
         text: fmtFn(v),
         itemKey: cols[i],
-        style: { textAlign: 'right', padding: '4px 5px', ...(i === lastIdx ? { fontWeight: 700, background: 'var(--color-neutral-100)' } : {}), ...(colorFn ? { color: colorFn(v) } : {}) },
+        style: { textAlign: 'right', padding: '6px 8px', ...(i === 0 ? { borderLeft: '1px solid var(--color-border)' } : {}), ...(i === lastIdx ? { fontWeight: 600, background: 'var(--color-neutral-100)' } : {}), ...(colorFn ? { color: colorFn(v) } : {}) },
       }));
       return {
         label: c.country, bold, clickable,
@@ -254,7 +256,7 @@ export default function CountryReportCard({ curRows, prevRows, major, MAJORS, se
   return (
     <div className="card elev-sm" style={{ padding: 24, marginTop: 16 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-        <h2 style={{ margin: 0, fontSize: 19 }}>{major === 'all' ? '전체 주류' : major}_국가별 수입금액</h2>
+        <h2 style={{ margin: 0, fontSize: 19 }}>{major === 'all' ? '전체 주류' : major}_국가별수입({METRIC_OPTS.find(o => o.id === metric).label})</h2>
         <div className="seg">
           {METRIC_OPTS.map(opt => (
             <button key={opt.id} type="button" className="seg-opt" style={{ border: 'none', ...segStyle(metric === opt.id) }} onClick={() => setMetric(opt.id)}>{opt.label}</button>
@@ -331,7 +333,7 @@ export default function CountryReportCard({ curRows, prevRows, major, MAJORS, se
               <tr key={i} style={row.bold ? { background: 'var(--color-neutral-100)' } : (row.clickable && focusCountries.includes(row.label) ? { background: 'var(--color-accent-soft)' } : {})}>
                 <td
                   onClick={row.clickable ? () => toggleFocusCountry(row.label) : undefined}
-                  style={{ padding: '4px 6px', fontWeight: row.bold ? 700 : 400, ...(row.clickable ? { cursor: 'pointer' } : {}) }}
+                  style={{ padding: '6px 8px', fontWeight: row.bold ? 600 : 400, ...(row.clickable ? { cursor: 'pointer' } : {}) }}
                 >
                   {row.label}
                 </td>

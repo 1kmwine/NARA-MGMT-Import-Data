@@ -19,7 +19,6 @@ export default function Dashboard({ rows, monthsList, COUNTRIES, MAJORS, apiBase
   const [showAll, setShowAll] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [updateMessage, setUpdateMessage] = useState(null);
-  const [majorMenuOpen, setMajorMenuOpen] = useState(false);
 
   const toggleYear = (id) => setSelectedYears(cur => cur.includes(id) ? cur.filter(y => y !== id) : [...cur, id].sort());
   const toggleMonth = (id) => {
@@ -126,7 +125,8 @@ export default function Dashboard({ rows, monthsList, COUNTRIES, MAJORS, apiBase
 
     const yearsToShow = selYearsNum.length ? selYearsNum : [topYear - 1, topYear];
     const filtered = rows.filter(r => matchesFilter(r) && (!s.country || r.countryId === s.country));
-    const monthsInScope = monthsList.filter(m => yearsToShow.includes(m.year));
+    const inSelMonths = m => !selMonthsNum.length || selMonthsNum.includes(m);
+    const monthsInScope = monthsList.filter(m => yearsToShow.includes(m.year) && inSelMonths(m.month));
     const n = monthsInScope.length;
     const marginLeft = 64, marginRight = 16, plotTop = 40, plotH = 175;
     const plotW = 860 - marginLeft - marginRight;
@@ -169,15 +169,18 @@ export default function Dashboard({ rows, monthsList, COUNTRIES, MAJORS, apiBase
     const trendYearSummary = yearsToShow.map(y => {
       const isCurrent = y === topYear;
       const monthCap = isCurrent ? latestMonth : 12;
-      const curYearRows = filtered.filter(r => r.year === y && r.month <= monthCap);
-      const prevYearRows = filtered.filter(r => r.year === y - 1 && r.month <= monthCap);
+      // 월을 고르면 그 달들만 합산(연/월 연동), 아니면 기존 YTD(현재연도) / 연간(과거연도).
+      const inScope = m => selMonthsNum.length ? selMonthsNum.includes(m) : m <= monthCap;
+      const curYearRows = filtered.filter(r => r.year === y && inScope(r.month));
+      const prevYearRows = filtered.filter(r => r.year === y - 1 && inScope(r.month));
       const curV = sumField(curYearRows, 'value'), prevV = sumField(prevYearRows, 'value');
       const curQ = sumField(curYearRows, 'volume'), prevQ = sumField(prevYearRows, 'volume');
       const vDelta = trendDelta(prevV ? pctDiff(curV, prevV) : null);
       const qDelta = trendDelta(prevQ ? pctDiff(curQ, prevQ) : null);
+      const periodTag = selMonthsNum.length ? ' · ' + formatMonthRange(selMonthsNum) : (isCurrent ? ' · ' + monthCap + '월 YTD' : '');
       return {
         year: y,
-        yearLabel: y + '년' + (isCurrent ? ' · ' + monthCap + '월 YTD' : ''),
+        yearLabel: y + '년' + periodTag,
         valueDisplay: fmtMoney(curV), valueYoyText: vDelta.text, valueYoyColor: vDelta.color,
         volumeDisplay: fmtVolumeML(curQ), volumeYoyText: qDelta.text, volumeYoyColor: qDelta.color,
       };
@@ -224,23 +227,19 @@ export default function Dashboard({ rows, monthsList, COUNTRIES, MAJORS, apiBase
       });
       return { year: y, segments };
     });
-    const compTitle = (s.major === 'all' ? '주종별(대구분)' : s.major + ' · 중구분') + ' 비중 (연도별 비교)';
+    const compTitle = (s.major === 'all' ? '주종별' : s.major + ' · 세부 주종') + ' 비중';
 
-    // 와인을 맨 앞에 고정하고 나머지는 원래 순서(수입액 내림차순) 유지 — 상위 8개만
-    // 버튼으로 보여주고 나머지(와인(2L 이상)은 무조건 포함)는 '···' 드롭다운 뒤로 숨긴다.
+    // 와인을 맨 앞에 고정하고 나머지는 원래 순서(수입액 내림차순) 유지 — 드롭다운이라
+    // 전부 목록에 담으면 되므로 예전 8개+'···' 오버플로우 분리는 필요 없다.
     const majorsWineFirst = [...MAJORS].sort((a, b) => (a.major === '와인' ? -1 : b.major === '와인' ? 1 : 0));
-    const PINNED_OVERFLOW = new Set(['와인(2L 이상)']);
-    const visibleMajors = majorsWineFirst.filter(m => !PINNED_OVERFLOW.has(m.major)).slice(0, 8);
-    const visibleIds = new Set(visibleMajors.map(m => m.major));
-    const majorOptsVisible = [{ id: 'all', label: '전체' }, ...visibleMajors.map(m => ({ id: m.major, label: m.major }))];
-    const majorOptsOverflow = majorsWineFirst.filter(m => !visibleIds.has(m.major)).map(m => ({ id: m.major, label: m.major }));
+    const majorOpts = [{ id: 'all', label: '전체' }, ...majorsWineFirst.map(m => ({ id: m.major, label: m.major }))];
     const activeMajorDef = s.major !== 'all' ? MAJORS.find(m => m.major === s.major) : null;
     const minorOptsBase = activeMajorDef ? [{ id: 'all', label: '전체' }, ...activeMajorDef.minors.map(mn => ({ id: mn.minor, label: mn.minor }))] : null;
 
     return {
       dataSourceLabel, windowLabel, kpis, trendValueLine, trendVolumeLine, trendValueLabels, trendVolumeLabels, trendXLabels, trendYearSummary, trendAxisY: axisY,
       rankingBars, compData, compTitle,
-      majorOptsVisible, majorOptsOverflow, minorOptsBase,
+      majorOpts, minorOptsBase,
       topYear, kpiMaxM, latestYear: latestPeriod.year, selMonthsNum,
       reportCurRows: kpiCurRowsAll.filter(r => s.major === 'all' || r.major === s.major),
       reportPrevRows: kpiPrevRowsAll.filter(r => s.major === 'all' || r.major === s.major),
@@ -265,64 +264,41 @@ export default function Dashboard({ rows, monthsList, COUNTRIES, MAJORS, apiBase
 
       <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 32px' }}>
 
-        <FilterRow label="연도">
-          {YEARS_ALL.map(y => (
-            <button key={y} type="button" className="seg-opt" style={{ border: 'none', ...segStyle(selectedYears.includes(String(y))) }} onClick={() => toggleYear(String(y))}>{y}년</button>
-          ))}
-        </FilterRow>
-
-        <FilterRow label="월">
-          {monthOptsBase.map(opt => (
-            <button key={opt.id} type="button" className="seg-opt" style={{ border: 'none', ...segStyle(opt.id === 'all' ? !selectedMonths.length : selectedMonths.includes(opt.id)) }} onClick={() => toggleMonth(opt.id)}>{opt.label}</button>
-          ))}
-        </FilterRow>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginTop: 10 }}>
-          <span className="text-muted" style={{ fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', width: 82, flexShrink: 0 }}>주종(대구분)</span>
-          <div className="seg" style={{ flexWrap: 'wrap' }}>
-            {v.majorOptsVisible.map(opt => (
-              <button key={opt.id} type="button" className="seg-opt" style={{ border: 'none', ...segStyle(major === opt.id) }} onClick={() => { setMajor(opt.id); setMinor(null); }}>{opt.label}</button>
-            ))}
-          </div>
-          {v.majorOptsOverflow.length > 0 && (
-            <div style={{ position: 'relative' }}>
-              <div className="seg">
-                <button
-                  type="button" className="seg-opt" style={{ border: 'none', ...segStyle(v.majorOptsOverflow.some(o => o.id === major)) }}
-                  onClick={() => setMajorMenuOpen(o => !o)}
-                >
-                  {v.majorOptsOverflow.find(o => o.id === major)?.label ?? '···'}
-                </button>
-              </div>
-              {majorMenuOpen && (
-                <>
-                  <div style={{ position: 'fixed', inset: 0, zIndex: 19 }} onClick={() => setMajorMenuOpen(false)} />
-                  <div className="card elev-sm" style={{ position: 'absolute', top: '110%', left: 0, zIndex: 20, padding: 6, display: 'flex', flexDirection: 'column', gap: 2, minWidth: 130 }}>
-                    {v.majorOptsOverflow.map(opt => (
-                      <button
-                        key={opt.id} type="button" className="seg-opt" style={{ border: 'none', justifyContent: 'flex-start', ...segStyle(major === opt.id) }}
-                        onClick={() => { setMajor(opt.id); setMinor(null); setMajorMenuOpen(false); }}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
+        <div style={{ display: 'flex', gap: 20, rowGap: 10, flexWrap: 'wrap', alignItems: 'center', marginTop: 4 }}>
+          <FilterDropdown
+            label="연도" multi
+            options={YEARS_ALL.map(y => ({ id: String(y), label: y + '년' }))}
+            isSelected={id => selectedYears.includes(id)}
+            onPick={toggleYear}
+            summary={!selectedYears.length ? '없음' : selectedYears.length === YEARS_ALL.length ? '전체' : selectedYears.join(', ')}
+          />
+          <FilterDropdown
+            label="월" multi
+            options={monthOptsBase}
+            isSelected={id => (id === 'all' ? !selectedMonths.length : selectedMonths.includes(id))}
+            onPick={toggleMonth}
+            summary={!selectedMonths.length ? '전체' : formatMonthRange(selectedMonths.map(Number))}
+          />
+          <FilterDropdown
+            label="주종"
+            options={v.majorOpts}
+            isSelected={id => major === id}
+            onPick={id => { setMajor(id); setMinor(null); }}
+            summary={major === 'all' ? '전체' : major}
+          />
+          {v.minorOptsBase && (
+            <FilterDropdown
+              label="세부 주종"
+              options={v.minorOptsBase}
+              isSelected={id => (minor || 'all') === id}
+              onPick={id => setMinor(id === 'all' ? null : id)}
+              summary={minor ? shortMinorLabel(minor, major) : '전체'}
+            />
           )}
           {country && (
             <span className="tag tag-accent" style={{ cursor: 'pointer' }} onClick={() => setCountry(null)}>{COUNTRIES.find(c => c.id === country)?.name} ✕</span>
           )}
         </div>
-
-        {v.minorOptsBase && (
-          <FilterRow label="중구분">
-            {v.minorOptsBase.map(opt => (
-              <button key={opt.id} type="button" className="seg-opt" style={{ border: 'none', ...segStyle((minor || 'all') === opt.id) }} onClick={() => setMinor(opt.id === 'all' ? null : opt.id)}>{opt.label}</button>
-            ))}
-          </FilterRow>
-        )}
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginTop: 24 }}>
           {v.kpis.map((kpi, i) => (
@@ -413,11 +389,41 @@ export default function Dashboard({ rows, monthsList, COUNTRIES, MAJORS, apiBase
   );
 }
 
-function FilterRow({ label, children }) {
+function FilterDropdown({ label, options, isSelected, onPick, summary, multi }) {
+  const [open, setOpen] = useState(false);
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginTop: 10 }}>
-      <span className="text-muted" style={{ fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', width: 82, flexShrink: 0 }}>{label}</span>
-      <div className="seg" style={{ flexWrap: 'wrap' }}>{children}</div>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <span className="text-muted" style={{ fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', flexShrink: 0 }}>{label}</span>
+      <div style={{ position: 'relative' }}>
+        <button
+          type="button" className="btn btn-secondary"
+          style={{ minWidth: 150, justifyContent: 'space-between', gap: 8, fontWeight: 500 }}
+          onClick={() => setOpen(o => !o)}
+        >
+          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{summary}</span>
+          <span aria-hidden style={{ fontSize: 10, opacity: 0.55 }}>▾</span>
+        </button>
+        {open && (
+          <>
+            <div style={{ position: 'fixed', inset: 0, zIndex: 19 }} onClick={() => setOpen(false)} />
+            <div className="card elev-sm" style={{ position: 'absolute', top: '110%', left: 0, zIndex: 20, padding: 6, display: 'flex', flexDirection: 'column', gap: 2, minWidth: 170, maxHeight: 300, overflowY: 'auto' }}>
+              {options.map(opt => {
+                const on = isSelected(opt.id);
+                return (
+                  <button
+                    key={opt.id} type="button" className="seg-opt"
+                    style={{ border: 'none', justifyContent: 'flex-start', gap: 8, whiteSpace: 'nowrap', ...segStyle(on) }}
+                    onClick={() => { onPick(opt.id); if (!multi) setOpen(false); }}
+                  >
+                    <span style={{ width: 14, flexShrink: 0, opacity: on ? 1 : 0 }}>✓</span>
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
