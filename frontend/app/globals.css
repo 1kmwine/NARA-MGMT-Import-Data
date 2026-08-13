@@ -2,20 +2,12 @@
 @import './tokens/typography.css';
 @import './tokens/spacing.css';
 
-/* Self-hosted so it renders even on the internal server where clients may have
-   no outbound internet — no external @import to a font CDN. Pretendard covers
-   Hangul + Latin in one family, so headings/body/UI share one cohesive font. */
-@font-face {
-  font-family: "Pretendard";
-  src: url("/fonts/PretendardVariable.woff2") format("woff2-variations");
-  font-weight: 400 700;
-  font-display: swap;
-}
-
 :root {
-  --font-serif-display: "Pretendard", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --font-sans-ui: "Pretendard", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --font-mono: ui-monospace, "Pretendard", SFMono-Regular, Menlo, monospace;
+  /* --font-pretendard is provided by next/font/local in layout.js (self-hosted,
+     basePath-aware). One Hangul+Latin family for headings/body/UI. */
+  --font-serif-display: var(--font-pretendard), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-sans-ui: var(--font-pretendard), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, var(--font-pretendard), SFMono-Regular, Menlo, monospace;
 
   /* Back-compat aliases so existing markup/JS (--color-bg, --color-accent-NNN ramps, etc.)
      picks up the design system's palette without a full rewrite. */

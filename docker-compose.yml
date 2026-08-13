@@ -3,19 +3,23 @@ services:
     build: ./backend
     env_file:
       - ./backend/.env
+    # Bound to localhost only — reached through the NID nginx at
+    # /NID/import-data/api/, not exposed as a public port.
     ports:
-      - "8010:8000"
+      - "127.0.0.1:8010:8000"
     volumes:
       - cache:/app/.cache
   frontend:
     build:
       context: ./frontend
       args:
-        NEXT_PUBLIC_API_BASE: ${NEXT_PUBLIC_API_BASE:-http://192.168.47.105:8010}
+        # Same-origin relative base so the browser hits the backend through
+        # nginx (/NID/import-data/api/…) instead of a public :8010 port.
+        NEXT_PUBLIC_API_BASE: ${NEXT_PUBLIC_API_BASE:-/NID/import-data}
     env_file:
       - ./frontend/.env
     ports:
-      - "3001:3000"
+      - "127.0.0.1:3001:3000"
     depends_on:
       - backend
 

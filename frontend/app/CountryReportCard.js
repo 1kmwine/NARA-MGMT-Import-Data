@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { fmtM1, fmtSigned1, fmtSignedPct1, deltaColorSimple, segStyle, shortMinorLabel, formatMonthRange } from './lib/format';
 import { Button } from './components/Button';
+import { BASE_PATH } from './lib/config';
 
 const pctChange = (prev, cur) => (prev !== 0 ? (cur - prev) / Math.abs(prev) * 100 : 0);
 
@@ -224,7 +225,7 @@ export default function CountryReportCard({ curRows, prevRows, major, MAJORS, se
   const fetchBullets = (force, instruction) => {
     const combined = [focusInstruction, instruction].filter(Boolean).join(' / ') || undefined;
     setLoading(true);
-    fetch('/api/insights', {
+    fetch(BASE_PATH + '/api/insights', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ stats: report.stats, instruction: combined, force: force || undefined }),

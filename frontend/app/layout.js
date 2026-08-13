@@ -1,4 +1,14 @@
+import localFont from "next/font/local";
 import "./globals.css";
+
+// Self-hosted via next/font so the bundle lands under /_next/static (basePath-aware)
+// and works whether the app is served at root or under /NID/import-data.
+const pretendard = localFont({
+  src: "./fonts/PretendardVariable.woff2",
+  weight: "400 700",
+  display: "swap",
+  variable: "--font-pretendard",
+});
 
 export const metadata = {
   title: "국내 수입 주류 대시보드",
@@ -7,7 +17,7 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="ko">
+    <html lang="ko" className={pretendard.variable}>
       <body>{children}</body>
     </html>
   );
