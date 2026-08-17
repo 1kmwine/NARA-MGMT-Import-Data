@@ -79,8 +79,13 @@ export default function Dashboard({ rows, monthsList, COUNTRIES, MAJORS, apiBase
     const kpiPrevRows = kpiPrevRowsAll.filter(matchesFilter);
 
     const latestMonth = monthsList[monthsList.length - 1].month;
-    const ytdCurMonthsRaw = kpiCurMonths.filter(m => m.month <= latestMonth);
-    const ytdPrevMonthsRaw = kpiPrevMonths.filter(m => m.month <= latestMonth);
+    // YTD only means "year to date" for the current (incomplete) data year.
+    // A completed past year selected as the top year should compare the full
+    // year, not be cut at the current year's latest month.
+    const isCurrentTopYear = topYear === latestPeriod.year;
+    const ytdCap = isCurrentTopYear ? latestMonth : 12;
+    const ytdCurMonthsRaw = kpiCurMonths.filter(m => m.month <= ytdCap);
+    const ytdPrevMonthsRaw = kpiPrevMonths.filter(m => m.month <= ytdCap);
     const ytdCurMonths = ytdCurMonthsRaw.length ? ytdCurMonthsRaw : kpiCurMonths;
     const ytdPrevMonths = ytdPrevMonthsRaw.length ? ytdPrevMonthsRaw : kpiPrevMonths;
     const ytdKeys = keysOf(ytdCurMonths), ytdPrevKeys = keysOf(ytdPrevMonths);
@@ -116,9 +121,14 @@ export default function Dashboard({ rows, monthsList, COUNTRIES, MAJORS, apiBase
       });
     })() : null;
 
+    // "YTD" only for the current year; a past full year says 연간, a month
+    // selection names the picked range.
+    const growthSubLabel = selMonthsNum.length
+      ? formatMonthRange(selMonthsNum) + ' 성장률'
+      : (isCurrentTopYear ? 'YTD 성장률' : '연간 성장률');
     const kpis = [
-      { label: '수입액 · ' + periodTag, value: fmtMoney(curValue), deltaText: dV.text + ' YoY', deltaColor: dV.color, sub: 'YTD 성장률 ' + dYtdV.text + ' · ' + (s.major === 'all' ? '전체 주류' : s.major) + ' 기준' },
-      { label: '수입중량 · ' + periodTag, value: fmtVolumeML(curVolume), deltaText: dVol.text + ' YoY', deltaColor: dVol.color, sub: 'YTD 성장률 ' + dYtdVol.text + ' · ' + (s.major === 'all' ? '전체 주류' : s.major) + ' 기준' },
+      { label: '수입액 · ' + periodTag, value: fmtMoney(curValue), deltaText: dV.text + ' YoY', deltaColor: dV.color, sub: growthSubLabel + ' ' + dYtdV.text + ' · ' + (s.major === 'all' ? '전체 주류' : s.major) + ' 기준' },
+      { label: '수입중량 · ' + periodTag, value: fmtVolumeML(curVolume), deltaText: dVol.text + ' YoY', deltaColor: dVol.color, sub: growthSubLabel + ' ' + dYtdVol.text + ' · ' + (s.major === 'all' ? '전체 주류' : s.major) + ' 기준' },
       { label: '평균 수입단가', value: priceBreakdown ? fmtUnitPrice(curPrice).replace('/kg', '/L') : fmtUnitPrice(curPrice), deltaText: dP.text + ' YoY', deltaColor: dP.color, sub: priceBreakdown ? 'L당 단가' : 'kg당 단가', priceBreakdown },
       { label: '전체 주류 대비 포도주 비중', value: curShare.toFixed(1) + '%', deltaText: shareDelta.text, deltaColor: shareDelta.color, sub: '수입액 기준' },
     ];
@@ -156,14 +166,11 @@ export default function Dashboard({ rows, monthsList, COUNTRIES, MAJORS, apiBase
     const pctX = x => (x / 860 * 100).toFixed(2) + '%';
     const pctY = y => (y / 280 * 100).toFixed(2) + '%';
     const labelMonths = [3, 6, 9, 12];
-    const trendValueLabels = monthsInScope
-      .map((m, i) => ({ m, i }))
-      .filter(({ m }) => m.month <= latestMonth)
-      .map(({ m, i }) => ({ left: pctX(xAt(i)), top: pctY(yValueAt(i) + (dirLabel(valuePerMonth, i) ? -8 : 14)), text: shortMoney(valuePerMonth[i]) }));
-    const trendVolumeLabels = monthsInScope
-      .map((m, i) => ({ m, i }))
-      .filter(({ m }) => m.month <= latestMonth)
-      .map(({ m, i }) => ({ left: pctX(xAt(i)), top: pctY(yVolumeAt(i) + (dirLabel(volumePerMonth, i) ? -8 : 14)), text: shortVolume(volumePerMonth[i]) }));
+    // On-chart per-month value labels. Shown for every point in monthsInScope
+    // (which already excludes months without data — so this is "값이 있을 경우").
+    // i/xFrac let the chart hover bold the matching month.
+    const trendValueLabels = monthsInScope.map((m, i) => ({ i, xFrac: xAt(i) / 860, left: pctX(xAt(i)), top: pctY(yValueAt(i) + (dirLabel(valuePerMonth, i) ? -8 : 14)), text: shortMoney(valuePerMonth[i]) }));
+    const trendVolumeLabels = monthsInScope.map((m, i) => ({ i, left: pctX(xAt(i)), top: pctY(yVolumeAt(i) + (dirLabel(volumePerMonth, i) ? -8 : 14)), text: shortVolume(volumePerMonth[i]) }));
     const trendXLabels = monthsInScope.map((m, i) => ({ left: pctX(xAt(i)), month: labelMonths.includes(m.month) ? 'M' + pad2(m.month) : false, year: m.month === 1 || i === 0 ? 'Y' + String(m.year).slice(-2) : false }));
 
     const trendYearSummary = yearsToShow.map(y => {
@@ -429,6 +436,20 @@ function FilterDropdown({ label, options, isSelected, onPick, summary, multi }) 
 }
 
 function TrendCard({ v }) {
+  const labels = v.trendValueLabels;
+  const [hovered, setHovered] = useState(null);
+
+  const onChartMove = (e) => {
+    if (!labels.length) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const frac = (e.clientX - rect.left) / rect.width;
+    let best = 0, bestD = Infinity;
+    labels.forEach((p) => { const d = Math.abs(p.xFrac - frac); if (d < bestD) { bestD = d; best = p.i; } });
+    setHovered(best);
+  };
+
+  const hoveredX = hovered != null && labels[hovered] ? labels[hovered].xFrac * 860 : null;
+
   return (
     <div className="card elev-sm" style={{ padding: 24, marginTop: 16 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: 12 }}>
@@ -471,18 +492,21 @@ function TrendCard({ v }) {
           <span style={{ fontSize: 12 }}>중량</span>
         </div>
       </div>
-      <div style={{ position: 'relative' }}>
+      <div style={{ position: 'relative' }} onMouseMove={onChartMove} onMouseLeave={() => setHovered(null)}>
         <svg viewBox="0 0 860 280" style={{ width: '100%', height: 'auto', display: 'block' }} xmlns="http://www.w3.org/2000/svg">
           <line x1="64" x2="844" y1={v.trendAxisY} y2={v.trendAxisY} stroke="var(--color-divider)" strokeWidth="1" />
+          {hoveredX != null && (
+            <line x1={hoveredX} x2={hoveredX} y1="40" y2={v.trendAxisY} stroke="var(--color-neutral-400)" strokeWidth="1" strokeDasharray="3 3" />
+          )}
           <polyline points={v.trendValueLine} fill="none" stroke="var(--color-accent-600)" strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" />
           <polyline points={v.trendVolumeLine} fill="none" stroke="var(--color-neutral-400)" strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" />
         </svg>
         <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
-          {v.trendValueLabels.map((lb, i) => (
-            <div key={'v' + i} style={{ position: 'absolute', left: lb.left, top: lb.top, transform: 'translate(-50%,-50%)', fontSize: 11, fontWeight: 600, color: 'var(--color-accent-700)', whiteSpace: 'nowrap' }}>{lb.text}</div>
+          {v.trendValueLabels.map((lb) => (
+            <div key={'v' + lb.i} style={{ position: 'absolute', left: lb.left, top: lb.top, transform: 'translate(-50%,-50%)', fontSize: hovered === lb.i ? 12.5 : 11, fontWeight: hovered === lb.i ? 800 : 500, color: 'var(--color-accent-700)', whiteSpace: 'nowrap' }}>{lb.text}</div>
           ))}
-          {v.trendVolumeLabels.map((lb, i) => (
-            <div key={'q' + i} style={{ position: 'absolute', left: lb.left, top: lb.top, transform: 'translate(-50%,-50%)', fontSize: 11, fontWeight: 600, color: 'var(--color-neutral-600)', whiteSpace: 'nowrap' }}>{lb.text}</div>
+          {v.trendVolumeLabels.map((lb) => (
+            <div key={'q' + lb.i} style={{ position: 'absolute', left: lb.left, top: lb.top, transform: 'translate(-50%,-50%)', fontSize: hovered === lb.i ? 12.5 : 11, fontWeight: hovered === lb.i ? 800 : 500, color: 'var(--color-neutral-600)', whiteSpace: 'nowrap' }}>{lb.text}</div>
           ))}
           {v.trendXLabels.map((xl, i) => (
             <div key={'x' + i}>
