@@ -1,9 +1,8 @@
 /** @type {import('next').NextConfig} */
-// Served behind the NID hub's nginx at /NID/import-data (path-based, not a bare
-// port). basePath is build-time inlined; keep it in sync with the nginx location
-// and the BASE_PATH used for same-origin fetches (app/lib/config.js).
-const nextConfig = {
-  basePath: process.env.NEXT_PUBLIC_BASE_PATH || "/NID/import-data",
-};
+// Reverted to root-serving (bare port :3001) — the hub source keeps
+// hardcoding m11's externalUrl back to http://192.168.47.105:3001/ on every
+// hub redeploy, so a basePath here just breaks the app. See project memory
+// for the path-based attempt if this gets revisited.
+const nextConfig = {};
 
 export default nextConfig;
