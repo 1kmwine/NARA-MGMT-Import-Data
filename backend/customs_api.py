@@ -123,6 +123,11 @@ def _fetch_one(session: requests.Session, service_key: str, hs_sgn: str, strt_yy
                 "item": item.findtext("statKor"),
                 "volume": item.findtext("impWgt"),
                 "value": item.findtext("impDlr"),
+                # API가 수출 실적도 같이 주는데(품목별 "수출입"실적이라 이름부터 그렇다)
+                # 이 대시보드가 수입만 다뤄서 그동안 안 뽑고 있었다 — DB 추출용으로 추가.
+                "exp_volume": item.findtext("expWgt"),
+                "exp_value": item.findtext("expDlr"),
+                "balance": item.findtext("balPayments"),
             }
         )
     return rows
@@ -148,6 +153,9 @@ def _tag_rows(raw_rows: list[dict], category: str, subcategory: str) -> list[dic
                 "subcategory": subcategory,
                 "volume": float(r["volume"] or 0),
                 "value": float(r["value"] or 0),
+                "exp_volume": float(r["exp_volume"] or 0),
+                "exp_value": float(r["exp_value"] or 0),
+                "balance": float(r["balance"] or 0),
             }
         )
     return tagged
@@ -173,7 +181,8 @@ def fetch_all(end_year: int | None = None, force: bool = False, sleep_sec: float
     """전체 HS코드 × 연도 구간을 순회하며 관세청 API에서 수입 데이터를 받아온다.
 
     columns: year(int), month(int), country(str), hs(str), item(str),
-             category(대구분), subcategory(중구분), volume(kg, float), value(USD, float), ym(int)
+             category(대구분), subcategory(중구분), volume(kg, float), value(USD, float),
+             exp_volume(kg, float), exp_value(USD, float), balance(USD, float), ym(int)
     """
     end_year = end_year or date.today().year
     CACHE_DIR.mkdir(exist_ok=True)
