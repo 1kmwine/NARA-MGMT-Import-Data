@@ -3,7 +3,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { sumField, pctDiff, deltaMeta, trendDelta, fmtMoney, fmtVolumeML, fmtUnitPrice, segStyle, shortMinorLabel, formatMonthRange } from './lib/format';
 import { Button } from './components/Button';
-import { StackedBarChart } from './components/StackedBarChart';
+import { StackedAreaChart } from './components/StackedAreaChart';
 import { CHART_PALETTE } from './components/PieChart';
 import { ExportModal } from './components/ExportModal';
 import { BASE_PATH } from './lib/config';
@@ -431,7 +431,7 @@ export default function Dashboard({ rows, monthsList, COUNTRIES, MAJORS, apiBase
             <h3 style={{ margin: '0 0 4px' }}>{v.compTitle}</h3>
             <div className="text-muted" style={{ fontSize: 11, marginBottom: 14 }}>금액 기준</div>
             <div style={{ flex: 1, minHeight: 0 }}>
-              <StackedBarChart data={v.compData} normalize />
+              <StackedAreaChart data={v.compData} />
             </div>
           </div>
         </div>
