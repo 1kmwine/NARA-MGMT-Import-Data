@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useState } from 'react';
 import { fmtM1, fmtSigned1, fmtSignedPct1, deltaColorSimple, segStyle, shortMinorLabel, formatMonthRange } from './lib/format';
 import { Button } from './components/Button';
 import { BASE_PATH } from './lib/config';
@@ -36,7 +36,7 @@ function metricValue(o, period, metric) {
   return q ? v / q : 0;
 }
 
-export default function CountryReportCard({ curRows, prevRows, major, MAJORS, selMonths, topYear, kpiMaxM, latestYear }) {
+const CountryReportCard = forwardRef(function CountryReportCard({ curRows, prevRows, major, MAJORS, selMonths, topYear, kpiMaxM, latestYear }, ref) {
   const [metric, setMetric] = useState('value');
   const [comment, setComment] = useState('');
   const [bullets, setBullets] = useState(null);
@@ -210,6 +210,27 @@ export default function CountryReportCard({ curRows, prevRows, major, MAJORS, se
   }, [curRows, prevRows, metric, subItems, groupField, periodSuffix, topYear, prevYear, major, focusCountries, focusItems]);
 
   const statsKey = JSON.stringify(report.stats);
+  const cardTitle = (major === 'all' ? '전체 주류' : major) + '_국가별수입(' + METRIC_OPTS.find(o => o.id === metric).label + ')';
+
+  // Exposes the currently-rendered table to the export modal (Dashboard.js) —
+  // reuses the exact same formatted cells shown on screen instead of
+  // re-deriving the aggregation for export.
+  useImperativeHandle(ref, () => ({
+    getExportData: () => ({
+      title: cardTitle,
+      groups: [
+        { label: periodLabelWide(prevYear), span: cols.length },
+        { label: periodLabelWide(topYear), span: cols.length },
+        { label: 'YoY Gap', span: cols.length },
+        { label: 'GRW%', span: cols.length },
+      ],
+      subHeader: [0, 1, 2, 3].flatMap(() => cols.map(k => (k === 'total' ? '합계' : shortMinorLabel(k, major)))),
+      rows: report.tableRows.map(r => ({ label: r.label, bold: r.bold, cells: r.cells.map(c => c.text) })),
+      unit: unitLabel(metric),
+      // 화면에 이미 떠 있는 인사이트를 그대로 씀 — export한다고 Gemini를 또 부르지 않는다.
+      insight: bullets,
+    }),
+  }));
 
   // 클릭으로 국가/항목을 좁혔으면 그 범위만 다루라는 지시를 자동으로 붙인다 —
   // 관점 입력창에 따로 타이핑한 지시가 있으면 그 뒤에 이어붙인다.
@@ -257,7 +278,7 @@ export default function CountryReportCard({ curRows, prevRows, major, MAJORS, se
   return (
     <div className="card elev-sm" style={{ padding: 24, marginTop: 16 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-        <h2 style={{ margin: 0, fontSize: 19 }}>{major === 'all' ? '전체 주류' : major}_국가별수입({METRIC_OPTS.find(o => o.id === metric).label})</h2>
+        <h2 style={{ margin: 0, fontSize: 19 }}>{cardTitle}</h2>
         <div className="seg">
           {METRIC_OPTS.map(opt => (
             <button key={opt.id} type="button" className="seg-opt" style={{ border: 'none', ...segStyle(metric === opt.id) }} onClick={() => setMetric(opt.id)}>{opt.label}</button>
@@ -359,4 +380,6 @@ export default function CountryReportCard({ curRows, prevRows, major, MAJORS, se
       <div style={{ textAlign: 'right', fontSize: 10.5, fontStyle: 'italic', color: 'var(--color-neutral-600)', marginTop: 8 }}>※ 출처: 관세청 수출입무역통계</div>
     </div>
   );
-}
+});
+
+export default CountryReportCard;

@@ -1,10 +1,12 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { sumField, pctDiff, deltaMeta, trendDelta, fmtMoney, fmtVolumeML, fmtUnitPrice, segStyle, shortMinorLabel, formatMonthRange } from './lib/format';
 import { Button } from './components/Button';
 import { StackedBarChart } from './components/StackedBarChart';
 import { CHART_PALETTE } from './components/PieChart';
+import { ExportModal } from './components/ExportModal';
+import { BASE_PATH } from './lib/config';
 import CountryReportCard from './CountryReportCard';
 
 const YEARS_ALL = [2026, 2025, 2024, 2023, 2022];
@@ -169,7 +171,8 @@ export default function Dashboard({ rows, monthsList, COUNTRIES, MAJORS, apiBase
     // On-chart per-month value labels. Shown for every point in monthsInScope
     // (which already excludes months without data — so this is "값이 있을 경우").
     // i/xFrac let the chart hover bold the matching month.
-    const trendValueLabels = monthsInScope.map((m, i) => ({ i, xFrac: xAt(i) / 860, left: pctX(xAt(i)), top: pctY(yValueAt(i) + (dirLabel(valuePerMonth, i) ? -8 : 14)), text: shortMoney(valuePerMonth[i]) }));
+    const monthLabelOf = m => 'Y' + String(m.year).slice(-2) + ' M' + pad2(m.month);
+    const trendValueLabels = monthsInScope.map((m, i) => ({ i, monthLabel: monthLabelOf(m), xFrac: xAt(i) / 860, left: pctX(xAt(i)), top: pctY(yValueAt(i) + (dirLabel(valuePerMonth, i) ? -8 : 14)), text: shortMoney(valuePerMonth[i]) }));
     const trendVolumeLabels = monthsInScope.map((m, i) => ({ i, left: pctX(xAt(i)), top: pctY(yVolumeAt(i) + (dirLabel(volumePerMonth, i) ? -8 : 14)), text: shortVolume(volumePerMonth[i]) }));
     const trendXLabels = monthsInScope.map((m, i) => ({ left: pctX(xAt(i)), month: labelMonths.includes(m.month) ? 'M' + pad2(m.month) : false, year: m.month === 1 || i === 0 ? 'Y' + String(m.year).slice(-2) : false }));
 
@@ -255,6 +258,59 @@ export default function Dashboard({ rows, monthsList, COUNTRIES, MAJORS, apiBase
 
   const monthOptsBase = [{ id: 'all', label: '전체' }, ...Array.from({ length: 12 }, (_, i) => i + 1).map(m => ({ id: String(m), label: m + '월' }))];
 
+  const [exportOpen, setExportOpen] = useState(false);
+  const countryCardRef = useRef(null);
+
+  // 내보내기 라이브러리(xlsx/pptxgenjs)는 크기가 있어 실제로 내보내기 누를 때만
+  // 로드한다. PPT의 차트는 이미지가 아니라 파워포인트 네이티브 차트로 만들기
+  // 때문에(exportPptx.js) 여기서는 화면 렌더값 그대로 숫자 데이터만 넘기면 된다.
+  const fetchInsight = async (stats) => {
+    try {
+      const res = await fetch(BASE_PATH + '/api/insights', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ stats }),
+      });
+      const data = await res.json();
+      return data.error ? null : data;
+    } catch {
+      return null;
+    }
+  };
+
+  const handleExport = async (format, selected) => {
+    // 상단 ➢ 2줄 인사이트는 PPT 헤드라인용 — 엑셀엔 안 붙인다(Gemini 안 부름).
+    // 국가별 표는 화면에 이미 생성돼 있는 걸 그대로 씀(ref), 추이는 export 시점에
+    // 새로 생성(같은 /api/insights, 서버 24h 캐시라 같은 통계면 재호출 안 됨).
+    let trendInsight = null;
+    if (format === 'pptx' && selected.trend) {
+      trendInsight = await fetchInsight({
+        지표: '수입액·수입중량',
+        비교대상: v.windowLabel,
+        연도별: v.trendYearSummary.map(y => ({
+          연도: y.yearLabel, 수입액: y.valueDisplay, 수입액_YoY: y.valueYoyText,
+          수입중량: y.volumeDisplay, 수입중량_YoY: y.volumeYoyText,
+        })),
+      });
+    }
+    const bundle = {
+      meta: { fileBase: '수입데이터', period: v.windowLabel, generatedAt: new Date() },
+      sections: {
+        kpi: v.kpis,
+        trend: { yearSummary: v.trendYearSummary, monthly: { labels: v.trendValueLabels, volumeLabels: v.trendVolumeLabels }, insight: trendInsight },
+        ranking: v.rankingBars,
+        composition: { title: v.compTitle, years: v.compData },
+        countryTable: selected.countryTable ? countryCardRef.current?.getExportData() : null,
+      },
+    };
+    if (format === 'excel') {
+      const { exportExcel } = await import('./lib/exportExcel');
+      exportExcel(bundle, selected);
+    } else {
+      const { exportPptx } = await import('./lib/exportPptx');
+      exportPptx(bundle, selected);
+    }
+    setExportOpen(false);
+  };
+
   return (
     <div style={{ minHeight: '100vh', background: 'var(--color-bg)', color: 'var(--color-text)', fontFamily: 'var(--font-body)', paddingBottom: 64 }}>
       <div className="nav" style={{ padding: '14px 32px' }}>
@@ -262,12 +318,15 @@ export default function Dashboard({ rows, monthsList, COUNTRIES, MAJORS, apiBase
         <span className="tag tag-outline" style={{ marginLeft: 14 }}>{v.dataSourceLabel}</span>
         <div style={{ flex: 1 }} />
         {updateMessage && <span className="text-muted" style={{ fontSize: 11 }}>{updateMessage}</span>}
+        <Button variant="secondary" size="sm" style={{ fontSize: 12, lineHeight: 1.4, fontWeight: 500 }} onClick={() => setExportOpen(true)}>내보내기</Button>
         <div className="seg">
           <button type="button" className="seg-opt" style={{ border: 'none', ...segStyle(false) }} onClick={triggerForceUpdate} disabled={isUpdating}>
             {isUpdating ? '갱신 중…' : '강제 업데이트'}
           </button>
         </div>
       </div>
+
+      <ExportModal open={exportOpen} onClose={() => setExportOpen(false)} onExport={handleExport} />
 
       <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 32px' }}>
 
@@ -378,6 +437,7 @@ export default function Dashboard({ rows, monthsList, COUNTRIES, MAJORS, apiBase
         </div>
 
         <CountryReportCard
+          ref={countryCardRef}
           curRows={v.reportCurRows}
           prevRows={v.reportPrevRows}
           major={major}
